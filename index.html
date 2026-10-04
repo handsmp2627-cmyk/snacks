@@ -72,6 +72,25 @@
   .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;background:#eef2f9;color:#2b3a55;margin-left:6px}
   .next{display:flex;gap:10px}
   .next .btn{margin-top:10px}
+  .daychips{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
+  .dchip{border:1px solid #c9cfda;border-radius:9px;padding:8px 0;text-align:center;font-size:13px;background:#fff;cursor:pointer;user-select:none}
+  .dchip small{display:block;font-size:10px;color:var(--muted)}
+  .dchip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .dchip.on small{color:#cfd8ea}
+  .dchip.lock{opacity:.55;cursor:not-allowed}
+  .dchip.diff{box-shadow:0 0 0 2px #e69138 inset}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:14px;margin-top:8px}
+  .kv div:nth-child(odd){color:var(--muted)}
+  .sec{font-weight:700;color:var(--navy);margin:16px 0 4px;font-size:14px}
+  .req{border:1px solid #e3b17a;background:#fdf3e7;border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13px}
+  .req .act{display:flex;gap:8px;margin-top:8px}
+  .req .act .btn{margin:0;padding:10px}
+  .btn.ok2{background:#2e7d32}.btn.no{background:#9c0006}
+  a.tel{color:var(--navy2);text-decoration:none;font-weight:600}
+  .radio{display:flex;gap:10px;margin-top:6px}
+  .radio label{display:flex;align-items:center;gap:6px;color:var(--text);font-size:14px;margin:0;border:1px solid #c9cfda;border-radius:9px;padding:9px 10px;flex:1}
+  .radio input{width:auto}
+  .badge2{display:inline-block;background:#9c0006;color:#fff;border-radius:10px;font-size:11px;padding:1px 7px;margin-left:6px;vertical-align:2px}
   @media (max-width:420px){ .cell input{min-width:58px} .grid td.day small{max-width:110px} }
 </style>
 </head>
@@ -101,12 +120,90 @@
 <!-- HOME -->
 <section id="v-home" class="hidden">
   <div class="tiles">
+    <button class="tile" onclick="go('info')" style="border-left-color:#548235"><b>School info <span id="tInfoBadge"></span></b><span>Students, recess time, contacts and working days. Request a change to student numbers.</span></button>
+    <button class="tile" onclick="go('ops')" style="border-left-color:#bf8f00"><b>Operations</b><span id="tOps">Open or close school days for next week – this week only or permanently.</span></button>
     <button class="tile" onclick="go('plan')"><b>Weekly snack plan</b><span id="tPlan">Forecast per school, day and shift.</span></button>
     <button class="tile" onclick="go('daily')"><b>Daily distribution</b><span id="tDaily">Received, distributed and leftovers – every day.</span></button>
   </div>
   <div class="card" style="margin-top:14px">
     <h2>Rules</h2>
     <div class="meta" id="rules"></div>
+  </div>
+</section>
+
+<!-- SCHOOL INFO -->
+<section id="v-info" class="hidden">
+  <div class="card hidden" id="iApprove">
+    <h2>Waiting for your approval</h2>
+    <div id="iApproveList"></div>
+  </div>
+  <div class="card">
+    <h2>School info</h2>
+    <label for="iSchool">School</label>
+    <select id="iSchool" onchange="loadInfo()"></select>
+  </div>
+  <div id="iBody" class="hidden">
+    <div class="card">
+      <div class="school" id="iName"></div>
+      <div class="meta" id="iMeta"></div>
+      <div class="sec">Students</div>
+      <div id="iStudents"></div>
+      <div id="iPending"></div>
+      <div id="iReqBox" class="hidden">
+        <div class="row2">
+          <div><label for="iShift">Shift</label><select id="iShift"></select></div>
+          <div><label for="iNew">Correct number</label><input id="iNew" type="number" inputmode="numeric" min="0"></div>
+        </div>
+        <label for="iReason">Reason (required)</label>
+        <select id="iReason"></select>
+        <label for="iNote">Details</label>
+        <input id="iNote" placeholder="e.g. updated registration list from the director">
+        <button class="btn" onclick="sendRequest()">Send for approval</button>
+      </div>
+      <button class="btn sec" id="iReqBtn" onclick="$('iReqBox').classList.remove('hidden');this.classList.add('hidden')">Request a change to student numbers</button>
+      <div class="sec">Working days</div>
+      <div id="iDays"></div>
+      <div class="info">To open or close days for a week, use <b>Operations</b>.</div>
+    </div>
+    <div class="card">
+      <h2>Recess, delivery and contacts</h2>
+      <div class="meta">Correct anything that has changed and save. Changes are recorded under your name.</div>
+      <div id="iFields"></div>
+      <button class="btn" id="iSave" onclick="saveInfo()">Save changes</button>
+      <div class="err" id="iErr"></div>
+      <div class="ok" id="iOk"></div>
+    </div>
+  </div>
+</section>
+
+<!-- OPERATIONS -->
+<section id="v-ops" class="hidden">
+  <div class="card">
+    <h2>Operations – school days</h2>
+    <label for="oWeek">Week (Monday – Sunday)</label>
+    <select id="oWeek" onchange="loadOps()"></select>
+    <label for="oSchool">School</label>
+    <select id="oSchool" onchange="loadOps()"></select>
+  </div>
+  <div id="oBody" class="hidden">
+    <div class="card">
+      <div class="school" id="oName"></div>
+      <div class="meta" id="oMeta"></div>
+      <div id="oShifts"></div>
+      <div class="sec">Is this change permanent?</div>
+      <div class="radio">
+        <label><input type="radio" name="oType" value="This week only" checked> This week only</label>
+        <label><input type="radio" name="oType" value="Permanent"> Permanent</label>
+      </div>
+      <label for="oReason">Reason (required)</label>
+      <select id="oReason"></select>
+      <label for="oNote">Details</label>
+      <input id="oNote" placeholder="e.g. school closed for municipal elections">
+      <button class="btn" id="oSave" onclick="saveOps()">Save school days</button>
+      <div class="err" id="oErr"></div>
+      <div class="ok" id="oOk"></div>
+      <div class="next hidden" id="oNext"><button class="btn sec" onclick="opsToPlan()">Update the weekly plan for this school →</button></div>
+    </div>
   </div>
 </section>
 
@@ -240,27 +337,32 @@ function login(){
     store('snk_uid',uid); store('snk_pin', $('lRem').checked ? pin : null);
     $('hsub').textContent = r.user.name+' · '+r.user.role;
     $('tPlan').textContent = 'Forecast per school, day and shift. Closes '+r.rules.planCutoff+' for the following week.';
-    $('tDaily').textContent = 'Received, distributed and leftovers. Enter by '+r.rules.dailyCutoff+' every day.';
+    $('tDaily').textContent = 'Received, distributed and leftovers. Each day can be entered until '+r.rules.dailyCutoff+(r.rules.dailyDays?' the next day.':'.');
     $('rules').innerHTML =
       '• <b>Weekly plan</b> for next week closes <b>'+esc(r.rules.planCutoff)+'</b>.<br>'+
       '• After that, only <b>'+esc(r.rules.pickup2)+'</b> can still change, on <b>'+esc(r.rules.midWeek)+'</b>, with a reason.<br>'+
-      '• <b>Daily figures</b> are entered the same day before <b>'+esc(r.rules.dailyCutoff)+'</b>. Past days are view only.<br>'+
+      '• <b>Daily figures</b> for a day can be entered until <b>'+esc(r.rules.dailyCutoff)+(r.rules.dailyDays?' the next day':'')+'</b>. Older days are view only.<br>'+
+      '• <b>Operations</b>: open or close days for next week before <b>'+esc(r.rules.planCutoff)+'</b> – the weekly plan follows straight away.<br>'+
+      '• Student numbers change only after your Project Officer approves.<br>'+
       '• Leftovers carry to the next working day unless given out as double portions.'+
       (r.user.canOverride?'<br>• As '+esc(r.user.role)+' you can edit closed days. A reason is always recorded.':'');
     var opts=S.reasons.map(function(x){return '<option>'+esc(x)+'</option>';}).join('');
     $('pReason').innerHTML='<option value="">Select a reason</option>'+opts; $('dReason').innerHTML=$('pReason').innerHTML;
+    $('iReason').innerHTML=$('pReason').innerHTML; $('oReason').innerHTML=$('pReason').innerHTML;
+    $('tInfoBadge').innerHTML = r.pending ? '<span class="badge2">'+r.pending+' to approve</span>' : '';
     $('lPin').value='';
-    document.querySelectorAll('#v-home .tile').forEach(function(t,i){ if(i<2) t.classList.toggle('hidden',!r.user.canEnter && !S.schools.length); });
     if(!r.user.canEnter){ $('pSave').classList.add('hidden'); }
     go('home');
   }).catch(function(e){ busy(false); store('snk_pin',null); show($('lErr'),e); });
 }
 function signOut(){ S.user=null; S.pin=''; store('snk_pin',null); go('login'); }
 function go(v){
-  ['login','home','plan','daily'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
+  ['login','home','info','ops','plan','daily'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
   $('btnBack').classList.toggle('hidden', v==='login'||v==='home');
   $('btnOut').classList.toggle('hidden', v==='login');
   if(v==='login') $('hsub').textContent='HAND';
+  if(v==='info') initInfo();
+  if(v==='ops') initOps();
   if(v==='plan') initPlan();
   if(v==='daily') initDaily();
   window.scrollTo(0,0);
@@ -299,11 +401,11 @@ function loadPlan(){
     .catch(function(e){ busy(false); show($('pErr'),e); $('pBody').classList.remove('hidden'); });
 }
 function renderPlan(){
-  var r=S.plan, s=r.school, hasPM=s.pm>0;
+  var r=S.plan, s=r.school, hasPM=s.hasPM;
   $('pBody').classList.remove('hidden');
   $('pName').textContent=s.name;
   $('pMeta').textContent=s.village+' · '+s.area+' · Monitor: '+s.monitor;
-  $('pChips').innerHTML='<span class="chip">AM students: <b>'+s.am+'</b></span>'+(hasPM?'<span class="chip">PM students: <b>'+s.pm+'</b></span>':'<span class="chip">No PM shift</span>')+
+  $('pChips').innerHTML='<span class="chip">AM students: <b>'+s.am+'</b></span>'+(hasPM?'<span class="chip">PM students: <b>'+s.pm+'</b></span>':'')+
     '<span class="chip">AM days: '+esc(s.amDays||'–')+'</span>'+(hasPM?'<span class="chip">PM days: '+esc(s.pmDays||'–')+'</span>':'');
   $('pLeft').innerHTML='Leftover in the school store now: <b>AM '+r.leftover.AM+'</b>'+(hasPM?' · <b>PM '+r.leftover.PM+'</b>':'')+'. Take it into account when you plan.';
   var modes={}; r.days.forEach(function(d){ ['AM','PM'].forEach(function(sh){ if(d[sh].working||d[sh].qty!=null) modes[d[sh].mode]=d[sh].msg; }); });
@@ -317,7 +419,7 @@ function renderPlan(){
   r.days.forEach(function(d,i){
     var anyDay = d.AM.working || d.AM.qty!=null || (hasPM && (d.PM.working || d.PM.qty!=null));
     if(!anyDay && !S.user.canOverride) return;
-    h+='<tr><td class="day">'+esc(d.label)+'<small>'+esc(d.menu||'')+'</small></td>'+cellHtml(d,'AM',i,s.am)+(hasPM?cellHtml(d,'PM',i,s.pm):'')+'</tr>';
+    h+='<tr><td class="day">'+esc(d.label)+(d.menu?'<small>'+esc(d.menu)+'</small>':'')+'</td>'+cellHtml(d,'AM',i,s.am)+(hasPM?cellHtml(d,'PM',i,s.pm):'')+'</tr>';
   });
   $('pGrid').innerHTML=h;
   var anyEdit=r.days.some(function(d){return (d.AM.editable&&d.AM.working)||(hasPM&&d.PM.editable&&d.PM.working)||(S.user.canOverride&&(d.AM.editable||d.PM.editable));});
@@ -386,10 +488,150 @@ function nextSchool(k){
   if(i<sel.options.length-1){ sel.selectedIndex=i+1; k==='p'?loadPlan():loadDaily(); window.scrollTo(0,0); }
 }
 
+/* ---------- school info ---------- */
+var FIELDS=[['sec','Recess and delivery'],['recAM','AM recess (start)','time'],['recPM','PM recess (start)','time','PM'],['deliv','Preferred delivery time','time'],
+  ['sec','Principal'],['pAM','Principal – AM'],['pAMph','Phone – AM','tel'],['pPM','Principal – PM',null,'PM'],['pPMph','Phone – PM','tel','PM'],
+  ['sec','Health educator'],['heAM','Health educator – AM'],['heAMph','Phone – AM','tel'],['hePM','Health educator – PM',null,'PM'],['hePMph','Phone – PM','tel','PM'],
+  ['sec','Other contacts and storage'],['dtt','DTT focal point'],['dttph','DTT phone','tel'],['cp','CP focal point'],['cpph','CP phone','tel'],['storage','Storage room available'],['remarks','Remarks','area']];
+function initInfo(){
+  schoolOpts($('iSchool'),null,'i');
+  $('iBody').classList.add('hidden');
+  loadApprovals();
+}
+function loadApprovals(){
+  if(!S.user.canOverride){ $('iApprove').classList.add('hidden'); return; }
+  call('apiPending',S.uid,S.pin).then(function(list){
+    $('iApprove').classList.toggle('hidden',!list.length);
+    $('tInfoBadge').innerHTML = list.length ? '<span class="badge2">'+list.length+' to approve</span>' : '';
+    $('iApproveList').innerHTML=list.map(function(q){
+      return '<div class="req"><b>'+esc(q.school)+'</b> – '+esc(q.village)+' · '+q.shift+'<br>Students: <b>'+q.current+' → '+q.requested+'</b><br>'+
+        esc(q.reason)+(q.note?' – '+esc(q.note):'')+'<br><span class="meta">'+esc(q.by)+' · '+esc(q.at)+' · '+q.id+'</span>'+
+        '<div class="act"><button class="btn ok2" onclick="decide(\''+q.id+'\',\'Approved\')">Approve</button><button class="btn no" onclick="decide(\''+q.id+'\',\'Rejected\')">Reject</button></div></div>';
+    }).join('');
+  });
+}
+function decide(id,dec){
+  var note = dec==='Rejected' ? (prompt('Reason for rejecting (optional):')||'') : '';
+  busy(true);
+  call('apiDecide',S.uid,S.pin,id,dec,note).then(function(){ busy(false); loadApprovals(); if($('iSchool').value) loadInfo(); })
+    .catch(function(e){ busy(false); alert(e); });
+}
+function loadInfo(){
+  var sid=$('iSchool').value; show($('iErr'),''); show($('iOk'),'');
+  if(!sid){ $('iBody').classList.add('hidden'); return; }
+  busy(true);
+  call('apiGetInfo',S.uid,S.pin,sid).then(function(r){ busy(false); S.info=r; renderInfo(); }).catch(function(e){ busy(false); alert(e); });
+}
+function telLink(v){ return v ? '<a class="tel" href="tel:'+esc(String(v).replace(/\s/g,''))+'">'+esc(v)+'</a>' : '<span class="meta">–</span>'; }
+function renderInfo(){
+  var r=S.info, s=r.school, hasPM=s.hasPM || (r.shifts.indexOf('PM')>=0 && s.pm>0);
+  $('iBody').classList.remove('hidden');
+  $('iName').textContent=s.name; $('iMeta').textContent=s.village+' · '+s.area+' · Monitor: '+s.monitor+' · PO: '+(s.po||'–');
+  $('iStudents').innerHTML='<div class="chips"><span class="chip">AM: <b>'+s.am+'</b></span>'+(r.shifts.indexOf('PM')>=0||s.pm?'<span class="chip">PM: <b>'+s.pm+'</b></span>':'')+'</div>';
+  $('iPending').innerHTML=r.pending.map(function(q){ return '<div class="req">Waiting for approval: <b>'+q.shift+' '+q.current+' → '+q.requested+'</b> · '+esc(q.reason)+' · '+esc(q.by)+'</div>'; }).join('');
+  $('iShift').innerHTML=r.shifts.map(function(x){return '<option>'+x+'</option>';}).join('') || '<option>AM</option>';
+  $('iReqBox').classList.add('hidden'); $('iReqBtn').classList.toggle('hidden',!r.canEdit); $('iNew').value='';
+  var D=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  $('iDays').innerHTML=['AM','PM'].filter(function(x){return x==='AM'||hasPM;}).map(function(sh){
+    return '<div class="meta" style="margin-top:6px">'+sh+'</div><div class="daychips">'+D.map(function(d,i){ return '<div class="dchip lock'+(r.days[sh][i]?' on':'')+'">'+d+'</div>'; }).join('')+'</div>';
+  }).join('');
+  var h='';
+  FIELDS.forEach(function(f){
+    if(f[0]==='sec'){ h+='<div class="sec">'+f[1]+'</div>'; return; }
+    if(f[3]==='PM' && !hasPM) return;
+    var v=r.info[f[0]]||'', dis=r.canEdit?'':' disabled';
+    if(f[2]==='area') h+='<label>'+f[1]+'</label><textarea data-k="'+f[0]+'" rows="2"'+dis+'>'+esc(v)+'</textarea>';
+    else h+='<label>'+f[1]+(f[2]==='tel'&&v?' · '+telLink(v):'')+'</label><input data-k="'+f[0]+'" value="'+esc(v)+'"'+(f[2]==='time'?' type="time"':f[2]==='tel'?' type="tel" inputmode="tel"':'')+dis+'>';
+  });
+  $('iFields').innerHTML=h; $('iSave').classList.toggle('hidden',!r.canEdit);
+}
+function sendRequest(){
+  var v=$('iNew').value, rs=$('iReason').value;
+  if(v===''){ alert('Enter the correct number of students.'); return; }
+  if(!rs){ alert('Select a reason.'); return; }
+  busy(true);
+  call('apiRequestStudents',S.uid,S.pin,S.info.school.id,$('iShift').value,+v,rs,$('iNote').value.trim()).then(function(x){
+    busy(false); $('iNote').value='';
+    show($('iOk'), x.status==='Approved' ? 'Saved – the new number applies now.' : 'Sent to your Project Officer for approval ('+x.id+'). The current number stays until it is approved.');
+    loadInfo(); loadApprovals();
+  }).catch(function(e){ busy(false); alert(e); });
+}
+function saveInfo(){
+  var f={}; document.querySelectorAll('#iFields [data-k]').forEach(function(el){ f[el.dataset.k]=el.value; });
+  show($('iErr'),''); show($('iOk'),''); busy(true);
+  call('apiSaveInfo',S.uid,S.pin,S.info.school.id,f).then(function(x){
+    busy(false); show($('iOk'), x.saved ? 'Saved '+x.saved+' change(s).' : 'Nothing changed.'); if(x.saved) loadInfo();
+  }).catch(function(e){ busy(false); show($('iErr'),e); });
+}
+
+/* ---------- operations ---------- */
+function initOps(){
+  $('oWeek').innerHTML=S.weeks.map(function(w){return '<option value="'+w.value+'">'+esc(w.label)+'</option>';}).join('');
+  var nxt=S.weeks.filter(function(w){return w.label.indexOf('Next week')===0;})[0];
+  $('oWeek').value = nxt ? nxt.value : S.weeks[0].value;
+  schoolOpts($('oSchool'),null,'o');
+  $('oBody').classList.add('hidden');
+}
+function loadOps(){
+  var sid=$('oSchool').value; show($('oErr'),''); show($('oOk'),''); $('oNext').classList.add('hidden');
+  if(!sid){ $('oBody').classList.add('hidden'); return; }
+  busy(true);
+  call('apiGetOps',S.uid,S.pin,sid,$('oWeek').value).then(function(r){ busy(false); S.ops=r; renderOps(); }).catch(function(e){ busy(false); show($('oErr'),e); $('oBody').classList.remove('hidden'); });
+}
+function renderOps(){
+  var r=S.ops; $('oBody').classList.remove('hidden');
+  $('oName').textContent=r.school.name; $('oMeta').textContent=r.school.village+' · week '+r.weekLabel;
+  var h='', any=false;
+  Object.keys(r.shifts).forEach(function(sh){
+    var x=r.shifts[sh];
+    h+='<div class="sec">'+sh+' shift'+(x.changedThisWeek?' <span class="badge">changed for this week</span>':'')+'</div><div class="daychips">';
+    x.days.forEach(function(d,i){
+      var lock=!d.editable; if(!lock) any=true;
+      h+='<div class="dchip'+(d.open?' on':'')+(lock?' lock':'')+'" data-sh="'+sh+'" data-i="'+i+'" title="'+esc(d.msg)+'" onclick="toggleDay(this)">'+esc(d.label.split(' ')[0])+'<small>'+esc(d.label.split(' ').slice(1).join(' '))+'</small></div>';
+    });
+    h+='</div><div class="meta" style="margin-top:6px">Usual days: '+x.days.filter(function(d){return d.usual;}).map(function(d){return d.label.split(' ')[0];}).join(' ')+'. Tap a day to open or close it. Locked days are past the cut-off.</div>';
+  });
+  if(!Object.keys(r.shifts).length) h='<div class="info">No active shift at this school.</div>';
+  $('oShifts').innerHTML=h; $('oSave').disabled=!any;
+}
+function toggleDay(el){
+  if(el.classList.contains('lock')) return;
+  el.classList.toggle('on');
+  var d=S.ops.shifts[el.dataset.sh].days[+el.dataset.i];
+  el.classList.toggle('diff', el.classList.contains('on')!==d.open);
+}
+function saveOps(){
+  var data={}, changed=false;
+  Object.keys(S.ops.shifts).forEach(function(sh){
+    data[sh]=S.ops.shifts[sh].days.map(function(d,i){ var on=document.querySelector('.dchip[data-sh="'+sh+'"][data-i="'+i+'"]').classList.contains('on'); if(on!==d.open) changed=true; return on; });
+  });
+  var type=document.querySelector('input[name=oType]:checked').value, rs=$('oReason').value;
+  show($('oErr'),''); show($('oOk'),'');
+  if(!changed && type==='This week only'){ show($('oErr'),'Tap the days to open or close first.'); return; }
+  if(!rs){ show($('oErr'),'Select a reason.'); return; }
+  var removed=[]; Object.keys(data).forEach(function(sh){ S.ops.shifts[sh].days.forEach(function(d,i){ if(d.open&&!data[sh][i]&&d.planned) removed.push(sh+' '+d.label+' ('+d.planned+' planned)'); }); });
+  if(removed.length && !confirm('These days already have snacks planned. Closing them sets the plan to 0:\n'+removed.join('\n')+'\n\nContinue?')) return;
+  busy(true);
+  call('apiSaveOps',S.uid,S.pin,S.ops.school.id,S.ops.week,data,type,rs,$('oNote').value.trim()).then(function(x){
+    busy(false); $('oNote').value='';
+    var msg='Saved ('+type.toLowerCase()+').';
+    if(x.removed.length) msg+=' Closed: '+x.removed.join(', ')+'.';
+    if(x.added.length) msg+=' Opened: '+x.added.join(', ')+' – add the snacks for these days in the weekly plan.';
+    if(x.zeroed) msg+=' '+x.zeroed+' planned day(s) set to 0.';
+    show($('oOk'),msg); $('oNext').classList.toggle('hidden',!x.added.length);
+    call('apiGetOps',S.uid,S.pin,S.ops.school.id,S.ops.week).then(function(r){ S.ops=r; renderOps(); show($('oOk'),msg); $('oNext').classList.toggle('hidden',!x.added.length); });
+  }).catch(function(e){ busy(false); show($('oErr'),e); });
+}
+function opsToPlan(){
+  var sid=S.ops.school.id, wk=S.ops.week;
+  go('plan');
+  setTimeout(function(){ $('pWeek').value=wk; $('pSchool').value=sid; loadPlan(); },50);
+}
+
 /* ---------- daily ---------- */
 function initDaily(){
   var h='', today=S.now.ds, back=S.user.canOverride?30:14;
-  for(var i=0;i<=back;i++){ var d=addDays(today,-i); h+='<option value="'+d+'">'+(i===0?'Today · ':i===1?'Yesterday · ':'')+dLabel(d)+(i>0&&!S.user.canOverride?' (view)':'')+'</option>'; }
+  for(var i=0;i<=back;i++){ var d=addDays(today,-i); h+='<option value="'+d+'">'+(i===0?'Today · ':i===1?'Yesterday · ':'')+dLabel(d)+(i>(S.rules.dailyDays||0)&&!S.user.canOverride?' (view)':'')+'</option>'; }
   $('dDate').innerHTML=h; $('dDate').value=today;
   schoolOpts($('dSchool'),null,'d');
   $('dBody').classList.add('hidden');
@@ -411,13 +653,13 @@ function renderDaily(){
   $('dBody').classList.remove('hidden');
   $('dName').textContent=s.name;
   $('dMeta').textContent=r.label+' · '+s.village;
-  $('dChips').innerHTML='<span class="chip">Menu: <b>'+esc(r.menu||'not set')+'</b></span>';
-  var anyEdit=false, mode='';
+  $('dChips').innerHTML='';
+  var anyEdit=false, mode='', openMsg='';
   var h='';
   ['AM','PM'].forEach(function(sh){
     var x=r.shifts[sh];
     if(!x.exists) return;
-    var ed=x.editable; if(ed){ anyEdit=true; mode=x.mode; }
+    var ed=x.editable; if(ed){ anyEdit=true; mode=x.mode; openMsg=x.msg; }
     var dis=ed?'':' disabled';
     var rec = x.received!=null ? x.received : (ed && x.planned!=null ? x.planned : '');
     h+='<div class="shift" data-sh="'+sh+'"><h3>'+sh+' shift <span>'+x.students+' students'+(x.planned!=null?' · planned '+x.planned:' · no plan')+'</span></h3>';
@@ -434,7 +676,7 @@ function renderDaily(){
   $('dShifts').innerHTML=h;
   var anyNotes=['AM','PM'].map(function(k){return r.shifts[k].notes;}).filter(String)[0]||'';
   $('dNotes').value=anyNotes; $('dNotes').disabled=!anyEdit;
-  $('dBanner').innerHTML = anyEdit ? (mode==='override'?'<div class="warn">This day is closed. You are editing as '+esc(S.user.role)+' – a reason is required.</div>':'<div class="info">Open until '+esc(S.rules.dailyCutoff)+' today.</div>') : '';
+  $('dBanner').innerHTML = anyEdit ? (mode==='override'?'<div class="warn">This day is closed. You are editing as '+esc(S.user.role)+' – a reason is required.</div>':'<div class="info">'+esc(openMsg)+'.</div>') : '';
   $('dReasonBox').classList.toggle('hidden', !(anyEdit && mode==='override'));
   $('dSave').classList.toggle('hidden',!anyEdit);
   $('dSave').textContent = r.ds===S.now.ds ? "Save today's figures" : 'Save figures for '+dLabel(r.ds);
