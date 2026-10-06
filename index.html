@@ -144,9 +144,9 @@
 <!-- HOME -->
 <section id="v-home" class="hidden">
   <div class="tiles">
-    <button class="tile hidden" id="tKitchen" onclick="go('kitchen')" style="border-left-color:#c55a11"><b>Kitchen sandwiches <span id="tKBadge"></span></b><span id="tKText">Sandwiches needed per school, kitchen confirmation and the number distributed.</span></button>
     <button class="tile inf" onclick="go('info')" style="border-left-color:#548235"><b>School info <span id="tInfoBadge"></span></b><span>Students, recess time, contacts and working days. Request a change to student numbers.</span></button>
     <button class="tile inf" onclick="go('ops')" style="border-left-color:#bf8f00"><b>Operations</b><span id="tOps">Open or close school days for next week – this week only or permanently.</span></button>
+    <button class="tile hidden" id="tKitchen" onclick="go('kitchen')" style="border-left-color:#c55a11"><b>Kitchen sandwiches <span id="tKBadge"></span></b><span id="tKText">Sandwiches needed per school, kitchen confirmation and the number distributed.</span></button>
     <button class="tile snk" onclick="go('plan')"><b>Weekly snack plan</b><span id="tPlan">Forecast per school, day and shift.</span></button>
     <button class="tile snk" onclick="go('daily')"><b>Daily distribution</b><span id="tDaily">Received, distributed and leftovers – every day.</span></button>
   </div>
@@ -539,7 +539,7 @@ function renderKitchen(){
     var canSend=k.rows.some(function(x){return x.canOrder && !(k.canConfirm && x.id===k.id);});
     if(canSend) h+='<button class="btn'+(k.canConfirm?' sec':'')+'" onclick="kSend(\''+k.id+'\')">Send to kitchen</button>';
     if(k.canConfirm && (!k.confirmed || k.waiting || k.rows.some(function(x){return x.canOrder;}))){
-      var mopt=r.menus.map(function(x){return '<option'+(x===(k.menu||k.menuDefault||r.menuDefault)?' selected':'')+'>'+esc(x)+'</option>';}).join('');
+      var mopt=r.menus.map(function(x){return '<option'+(x===k.menu?' selected':'')+'>'+esc(x)+'</option>';}).join('');
       h+='<label for="km_'+k.id+'">Menu of the day</label><select id="km_'+k.id+'"><option value="">Choose the menu</option>'+mopt+'</select>'+
          '<button class="btn" onclick="kConfirm(\''+k.id+'\')">'+(k.confirmed?'Confirm again':'Confirm order')+'</button>';
     }
