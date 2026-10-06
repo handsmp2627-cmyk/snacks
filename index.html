@@ -4,7 +4,7 @@
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>SMP Snacks – HAND</title>
+<title>SMP · WFP.26 – Snacks & Kitchens</title>
 <style>
   :root{--navy:#1f3864;--navy2:#2f5597;--bg:#f3f5f9;--card:#fff;--line:#dde2ea;--text:#1d2433;--muted:#6b7385;
         --amber:#fce5cd;--amberT:#9a5b00;--red:#f4cccc;--redT:#9c0006;--blue:#cfe2f3;--blueT:#1c4f80;--grey:#ededed;--yellow:#fff2cc;--green:#2e7d32}
@@ -91,12 +91,36 @@
   .radio label{display:flex;align-items:center;gap:6px;color:var(--text);font-size:14px;margin:0;border:1px solid #c9cfda;border-radius:9px;padding:9px 10px;flex:1}
   .radio input{width:auto}
   .badge2{display:inline-block;background:#9c0006;color:#fff;border-radius:10px;font-size:11px;padding:1px 7px;margin-left:6px;vertical-align:2px}
+  .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--navy);border-radius:9px;overflow:hidden;margin-top:12px}
+  .seg button{border:0;background:#fff;color:var(--navy);font:600 14px/1.2 inherit;padding:8px;cursor:pointer}
+  .seg button small{display:block;font-weight:400;font-size:11px;opacity:.8}
+  .seg button.on{background:var(--navy);color:#fff}
+  .st{display:inline-block;font-size:11px;border-radius:10px;padding:2px 8px;margin:3px 3px 0 0;white-space:nowrap}
+  .st.g{background:#e3f1e5;color:#2e7d32}.st.a{background:var(--amber);color:var(--amberT)}.st.r{background:var(--red);color:var(--redT)}.st.y{background:var(--yellow);color:#7f6000}.st.n{background:#eef2f9;color:#2b3a55}
+  table.ktab{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px;font-variant-numeric:tabular-nums}
+  .ktab th{font-size:11px;color:var(--muted);font-weight:600;text-align:center;padding:4px 2px;border-bottom:1px solid var(--line)}
+  .ktab th:first-child{text-align:left}
+  .ktab td{padding:7px 3px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}
+  .ktab td.nm{text-align:right;direction:rtl;font-weight:600;font-size:14px;line-height:1.3}
+  .ktab td.nm small{display:block;font-weight:400;color:var(--muted);font-size:11px;direction:ltr;text-align:right}
+  .ktab input{width:72px;padding:8px 2px}
+  .ktab input.chg{background:var(--amber);border-color:#e3b17a}
+  .ktab input.late{background:var(--yellow)}
+  .ktab tr.sub td{border-bottom:1px solid var(--line);padding:4px 3px 10px;text-align:left}
+  .ktab tr.sub select,.ktab tr.sub input{width:100%;padding:8px;font-size:13px;margin-top:4px}
+  .ktab tr.tot td{font-weight:700;border-bottom:0;background:#f6f8fb}
+  .ktab tr.miss td{background:#fffbea}
+  .mini{font-size:11px;color:var(--muted)}
+  details.kcard summary{cursor:pointer;list-style:none;direction:rtl;text-align:right}
+  details.kcard summary .meta{direction:ltr;display:block;text-align:left}
+  details.kcard[open] summary{margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .kcard h3{margin:0;font-size:16px;direction:rtl;text-align:right}
   @media (max-width:420px){ .cell input{min-width:58px} .grid td.day small{max-width:110px} }
 </style>
 </head>
 <body>
 <header>
-  <div class="t">SMP Snacks · WFP.26<span class="s" id="hsub">HAND</span></div>
+  <div class="t">SMP · WFP.26 – Snacks &amp; Kitchens<span class="s" id="hsub">HAND</span></div>
   <button id="btnBack" class="hidden" onclick="go('home')">Back</button>
   <button id="btnOut" class="hidden" onclick="signOut()">Sign out</button>
 </header>
@@ -120,10 +144,11 @@
 <!-- HOME -->
 <section id="v-home" class="hidden">
   <div class="tiles">
-    <button class="tile" onclick="go('info')" style="border-left-color:#548235"><b>School info <span id="tInfoBadge"></span></b><span>Students, recess time, contacts and working days. Request a change to student numbers.</span></button>
-    <button class="tile" onclick="go('ops')" style="border-left-color:#bf8f00"><b>Operations</b><span id="tOps">Open or close school days for next week – this week only or permanently.</span></button>
-    <button class="tile" onclick="go('plan')"><b>Weekly snack plan</b><span id="tPlan">Forecast per school, day and shift.</span></button>
-    <button class="tile" onclick="go('daily')"><b>Daily distribution</b><span id="tDaily">Received, distributed and leftovers – every day.</span></button>
+    <button class="tile hidden" id="tKitchen" onclick="go('kitchen')" style="border-left-color:#c55a11"><b>Kitchen sandwiches <span id="tKBadge"></span></b><span id="tKText">Sandwiches needed per school, kitchen confirmation and the number distributed.</span></button>
+    <button class="tile inf" onclick="go('info')" style="border-left-color:#548235"><b>School info <span id="tInfoBadge"></span></b><span>Students, recess time, contacts and working days. Request a change to student numbers.</span></button>
+    <button class="tile inf" onclick="go('ops')" style="border-left-color:#bf8f00"><b>Operations</b><span id="tOps">Open or close school days for next week – this week only or permanently.</span></button>
+    <button class="tile snk" onclick="go('plan')"><b>Weekly snack plan</b><span id="tPlan">Forecast per school, day and shift.</span></button>
+    <button class="tile snk" onclick="go('daily')"><b>Daily distribution</b><span id="tDaily">Received, distributed and leftovers – every day.</span></button>
   </div>
   <div class="card" style="margin-top:14px">
     <h2>Rules</h2>
@@ -275,6 +300,20 @@
     </div>
   </div>
 </section>
+
+<!-- KITCHEN -->
+<section id="v-kitchen" class="hidden">
+  <div class="card">
+    <h2>Kitchen sandwiches</h2>
+    <label for="kDate">Day</label>
+    <select id="kDate" onchange="show($('kOk'),'');loadKitchen()"></select>
+    <div class="seg" id="kSeg"></div>
+    <div id="kBanner"></div>
+  </div>
+  <div class="err" id="kErr"></div>
+  <div class="ok" id="kOk"></div>
+  <div id="kBody"></div>
+</section>
 </main>
 <div class="spin hidden" id="spin"><div></div></div>
 
@@ -285,18 +324,41 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbyzRf6yjLSRwU1wY_KvcIIGY4
 /* ================================================================================================================================ */
 var S = { user:null, uid:'', pin:'', schools:[], reasons:[], plan:null, daily:null, now:null };
 function $(id){ return document.getElementById(id); }
+/* Calls that are safe to repeat automatically if Google returns an error page (busy server). */
+var NO_RETRY = { apiDecide:1, apiRequestStudents:1 };
+var BUSY_MSG = 'The server is busy right now. Please wait a few seconds and try again.';
 function call(fn){
   var args = Array.prototype.slice.call(arguments,1);
-  if(!(window.google && google.script && google.script.run)){
-    // GitHub Pages mode: text/plain POST keeps it a simple request (no CORS preflight)
-    return fetch(API_URL,{method:'POST',body:JSON.stringify({fn:fn,args:args}),redirect:'follow'})
-      .then(function(r){ return r.json(); }, function(){ throw 'No connection – check your internet and try again.'; })
-      .then(function(j){ if(j.error) throw j.error; return j.result; });
+  var tries = NO_RETRY[fn] ? 1 : 3;
+  function once(){
+    if(!(window.google && google.script && google.script.run)){
+      // GitHub Pages mode: text/plain POST keeps it a simple request (no CORS preflight)
+      return fetch(API_URL,{method:'POST',body:JSON.stringify({fn:fn,args:args}),redirect:'follow'})
+        .then(function(r){ return r.text(); }, function(){ throw {retry:true, msg:'No connection – check your internet and try again.'}; })
+        .then(function(t){
+          var j; try{ j = JSON.parse(t); }catch(e){ throw {retry:true, msg:BUSY_MSG}; } // Google sent an error page instead of data
+          if(j.error){ if(/lock|timed out|too many|try again later|service invoked/i.test(j.error)) throw {retry:true, msg:BUSY_MSG}; throw j.error; }
+          return j.result;
+        });
+    }
+    return new Promise(function(res,rej){
+      var r = google.script.run.withSuccessHandler(res).withFailureHandler(function(e){
+        var m = e && e.message ? e.message.replace(/^Error:\s*/,'') : String(e);
+        if(/server error|lock|timed out|too many|try again later|service invoked|NetworkError/i.test(m)) rej({retry:true, msg:BUSY_MSG}); else rej(m);
+      });
+      r[fn].apply(r,args);
+    });
   }
-  return new Promise(function(res,rej){
-    var r = google.script.run.withSuccessHandler(res).withFailureHandler(function(e){ rej(e && e.message ? e.message.replace(/^Error:\s*/,'') : String(e)); });
-    r[fn].apply(r,args);
-  });
+  function attempt(n){
+    return once().catch(function(e){
+      if(e && e.retry){
+        if(n < tries) return new Promise(function(ok){ setTimeout(ok, 1500*n); }).then(function(){ return attempt(n+1); });
+        throw e.msg;
+      }
+      throw e;
+    });
+  }
+  return attempt(1);
 }
 function busy(on){ $('spin').classList.toggle('hidden',!on); }
 function show(el,msg){ el.textContent = msg||''; el.style.display = msg ? 'block':'none'; }
@@ -309,9 +371,14 @@ function dLabel(ds){ var p=ds.split('-'); var d=new Date(Date.UTC(+p[0],+p[1]-1,
 
 /* ---------- boot / login ---------- */
 busy(true);
+(function(){ // signed-in users go straight in while the name list loads
+  var qu=null; try{ qu=new URLSearchParams(location.search).get('u'); }catch(e){}
+  var su=load('snk_uid'), sp=load('snk_pin');
+  if(sp && su && (!qu || qu.toUpperCase()===su)){ S.autoLogin=true; $('lRem').checked=true; doLogin(su, sp, true); }
+})();
 call('apiBoot').then(function(b){
-  busy(false);
-  $('hsub').textContent = 'HAND';
+  if(!S.autoLogin) busy(false);
+  if(!S.user) $('hsub').textContent = 'HAND';
   var groups = {}; b.users.forEach(function(u){ (groups[u.role]=groups[u.role]||[]).push(u); });
   var order=['Area Monitor','Project Officer','Senior Project Officer','Project Manager','Viewer'];
   var h='<option value="">Select your name</option>';
@@ -322,18 +389,21 @@ call('apiBoot').then(function(b){
   $('lUser').innerHTML=h;
   var qu=null; try{ qu=new URLSearchParams(location.search).get('u'); }catch(e){}
   var last=(qu||'').toUpperCase()||load('snk_uid'); if(last) $('lUser').value=last;
-  var savedPin=load('snk_pin');
-  if(savedPin && load('snk_uid') && (!qu || qu.toUpperCase()===load('snk_uid'))){ $('lUser').value=load('snk_uid'); $('lPin').value=savedPin; login(); }
-}).catch(function(e){ busy(false); show($('lErr'),e); });
+  if(S.autoLogin && load('snk_uid')) $('lUser').value=load('snk_uid');
+}).catch(function(e){ if(!S.autoLogin){ busy(false); show($('lErr'),e); } });
 
 $('lPin').addEventListener('keydown',function(e){ if(e.key==='Enter') login(); });
 function login(){
   var uid=$('lUser').value, pin=$('lPin').value.trim();
   if(!uid||!pin){ show($('lErr'),'Select your name and enter your PIN.'); return; }
+  doLogin(uid, pin, false);
+}
+function doLogin(uid, pin, auto){
   busy(true); show($('lErr'),'');
   call('apiLogin',uid,pin).then(function(r){
+    S.autoLogin=false;
     busy(false);
-    S.user=r.user; S.uid=uid; S.pin=pin; S.schools=r.schools; S.reasons=r.reasons; S.now=r.now; S.weeks=r.weeks; S.rules=r.rules;
+    S.user=r.user; S.uid=uid; S.pin=pin; S.schools=r.schools; S.infoSchools=r.infoSchools||r.schools; S.reasons=r.reasons; S.now=r.now; S.weeks=r.weeks; S.rules=r.rules;
     store('snk_uid',uid); store('snk_pin', $('lRem').checked ? pin : null);
     $('hsub').textContent = r.user.name+' · '+r.user.role;
     $('tPlan').textContent = 'Forecast per school, day and shift. Closes '+r.rules.planCutoff+' for the following week.';
@@ -350,14 +420,28 @@ function login(){
     $('pReason').innerHTML='<option value="">Select a reason</option>'+opts; $('dReason').innerHTML=$('pReason').innerHTML;
     $('iReason').innerHTML=$('pReason').innerHTML; $('oReason').innerHTML=$('pReason').innerHTML;
     $('tInfoBadge').innerHTML = r.pending ? '<span class="badge2">'+r.pending+' to approve</span>' : '';
+    S.kb = r.kitchen || {count:0}; S.kRules = r.kRules;
+    var hasSnack = S.schools.length>0, hasK = S.kb.count>0, hasInfo = S.infoSchools.length>0;
+    Array.prototype.forEach.call(document.querySelectorAll('.tile.snk'), function(t){ t.classList.toggle('hidden', !hasSnack); });
+    Array.prototype.forEach.call(document.querySelectorAll('.tile.inf'), function(t){ t.classList.toggle('hidden', !hasInfo); });
+    $('tKitchen').classList.toggle('hidden', !hasK);
+    kBadge();
+    var kr = hasK ? '• <b>Kitchen sandwiches</b>: send the number needed by <b>'+esc(r.kRules.am)+'</b> (AM)'+(r.kRules.shifts.indexOf('PM')>=0?' and <b>'+esc(r.kRules.pm)+'</b> (PM)':'')+'. You can correct it until the kitchen confirms.<br>'+
+      '• After the kitchen confirms, the number distributed equals the order. Change it only if needed, with a reason – highlighted the same day, approved by the Project Officer after that.' : '';
+    if(!hasSnack) $('rules').innerHTML = kr + '<br>• <b>School info</b>: student numbers change only after your Project Officer approves.<br>• <b>Operations</b>: open or close school days for next week before <b>'+esc(r.rules.planCutoff)+'</b>.';
+    else if(kr) $('rules').innerHTML += '<br>'+kr;
     $('lPin').value='';
     if(!r.user.canEnter){ $('pSave').classList.add('hidden'); }
     go('home');
-  }).catch(function(e){ busy(false); store('snk_pin',null); show($('lErr'),e); });
+  }).catch(function(e){
+    S.autoLogin=false; busy(false);
+    if(!auto || /PIN|not correct|Too many/i.test(e)) store('snk_pin',null); // keep the saved PIN if it was only a connection problem
+    show($('lErr'),e);
+  });
 }
 function signOut(){ S.user=null; S.pin=''; store('snk_pin',null); go('login'); }
 function go(v){
-  ['login','home','info','ops','plan','daily'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
+  ['login','home','info','ops','plan','daily','kitchen'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
   $('btnBack').classList.toggle('hidden', v==='login'||v==='home');
   $('btnOut').classList.toggle('hidden', v==='login');
   if(v==='login') $('hsub').textContent='HAND';
@@ -365,18 +449,152 @@ function go(v){
   if(v==='ops') initOps();
   if(v==='plan') initPlan();
   if(v==='daily') initDaily();
+  if(v==='kitchen') initKitchen();
   window.scrollTo(0,0);
 }
 function schoolOpts(sel, status, kind){
-  var cur=sel.value;
-  var h='<option value="">Select a school ('+S.schools.length+')</option>';
-  S.schools.forEach(function(s){
+  var cur=sel.value, list=(kind==='i'||kind==='o') ? (S.infoSchools||S.schools) : S.schools;
+  var h='<option value="">Select a school ('+list.length+')</option>';
+  list.forEach(function(s){
     var st=status&&status[s.id], mark='';
     if(st){ var need=kind==='p'?st.planNeed:st.dailyNeed, have=kind==='p'?st.planHave:st.dailyHave;
       mark = need===0 ? '  ·  no shift' : have>=need ? '  ✓' : have>0 ? '  · '+have+'/'+need : '  · to do'; }
-    h+='<option value="'+s.id+'">'+esc(s.name)+' – '+esc(s.village)+mark+'</option>';
+    h+='<option value="'+s.id+'">'+esc(s.name)+' – '+esc(s.village)+(s.kitchen?'  · '+esc(s.kitchen.indexOf('Kitchen')===0?'kitchen':'nearby'):'')+mark+'</option>';
   });
   sel.innerHTML=h; sel.value=cur;
+}
+
+
+/* ---------- kitchen sandwiches ---------- */
+var K = { shift:'' };
+function kBadge(){
+  var b=S.kb||{}, t=[];
+  if(b.confirm) t.push(b.confirm+' to confirm');
+  if(b.approve) t.push(b.approve+' to approve');
+  $('tKBadge').innerHTML = t.length ? '<span class="badge2">'+t.join(' · ')+'</span>' : '';
+}
+function initKitchen(){ K.shift=''; $('kDate').innerHTML=''; show($('kErr'),''); show($('kOk'),''); loadKitchen(); }
+function loadKitchen(){
+  busy(true); show($('kErr'),'');
+  call('apiKitchen',S.uid,S.pin,$('kDate').value||'',K.shift||'').then(function(r){ busy(false); S.k=r; K.shift=r.shift; renderKitchen(); })
+    .catch(function(e){ busy(false); show($('kErr'),e); });
+}
+function kSetShift(sh){ K.shift=sh; show($('kOk'),''); loadKitchen(); }
+function kChip(row){
+  if(!row.confirmed){
+    if(row.ordered===null) return row.works ? '<span class="st y">Not sent</span>' : '<span class="st n">No school today</span>';
+    return '<span class="st '+(row.late?'y':'g')+'">Sent '+esc(row.orderedAt)+(row.late?' · late':'')+'</span>';
+  }
+  if(row.pending) return '<span class="st y">Pending: '+row.pending.value+'</span>';
+  if(row.status==='Changed') return '<span class="st a">Changed</span>';
+  if(row.status==='Approved') return '<span class="st g">Approved</span>';
+  return '';
+}
+function renderKitchen(){
+  var r=S.k;
+  $('kDate').innerHTML=r.dates.map(function(d){return '<option value="'+d.value+'">'+esc(d.label)+'</option>';}).join('');
+  $('kDate').value=r.ds;
+  $('kSeg').innerHTML=r.shifts.map(function(sh){ return '<button class="'+(sh===r.shift?'on':'')+'" onclick="kSetShift(\''+sh+'\')">'+sh+'<small>orders close '+(sh==='AM'?S.kRules.am:S.kRules.pm)+'</small></button>'; }).join('');
+  $('kSeg').classList.toggle('hidden', r.shifts.length<2);
+  var ban='';
+  if(r.isToday) ban = r.closed ? '<div class="warn">'+r.shift+' orders closed at <b>'+esc(r.cutoff)+'</b>. Orders sent now are marked late.</div>'
+                               : '<div class="warn">⏱ '+r.shift+' orders close at <b>'+esc(r.cutoff)+'</b>.</div>';
+  else ban = '<div class="info">'+esc(r.label)+' – past day. A change to the number distributed goes to the Project Officer for approval.</div>';
+  $('kBanner').innerHTML=ban;
+  if(!r.kitchens.length){ $('kBody').innerHTML='<div class="card"><div class="meta">No kitchen schools are assigned to you.</div></div>'; return; }
+  var reasons='<option value="">Reason (required)</option>'+r.reasons.map(function(x){return '<option>'+esc(x)+'</option>';}).join('');
+  var conf=0;
+  $('kBody').innerHTML=r.kitchens.map(function(k){
+    if(k.canConfirm && r.isToday) conf+=k.waiting;
+    var anyConf=k.rows.some(function(x){return x.confirmed;});
+    var tO0=0,tD0=0; k.rows.forEach(function(x){ if(x.ordered!==null) tO0+=x.ordered; if(x.confirmed&&x.dist!==null) tD0+=x.dist; });
+    var act = (k.canConfirm && r.isToday && k.waiting) || k.rows.some(function(x){return x.canDecide;});
+    var fold = r.overview && r.kitchens.length>1;
+    var h=(fold?'<details class="card kcard"'+(act?' open':'')+'><summary><b>'+esc(k.name)+'</b><br><span class="meta">'+
+        (k.confirmed?'✓ confirmed '+esc(k.confirmed.at):(k.waiting?k.waiting+' order(s) waiting':'no orders yet'))+' · ordered '+tO0+(k.confirmed?' · distributed '+tD0:'')+
+        (k.rows.some(function(x){return x.pending;})?' · <span class="st y">change to approve</span>':'')+'</span></summary>':'<div class="card kcard">')+
+      (fold?'':'<h3>'+esc(k.name)+'</h3>')+'<div class="meta">Kitchen'+(k.ks?' · supervisor '+esc(k.ks):'')+' · '+
+      (k.confirmed?'<span class="st g">✓ Confirmed '+esc(k.confirmed.at)+' by '+esc(k.confirmed.by)+'</span>':'<span class="st y">Not confirmed yet</span>')+
+      (k.menu?' <span class="st n">'+esc(k.menu)+'</span>':'')+'</div>';
+    if(k.confirmed && k.waiting) h+='<div class="warn">'+k.waiting+' order'+(k.waiting>1?'s':'')+' came in after the kitchen confirmed'+(k.canConfirm?' – confirm again below.':'.')+'</div>';
+    h+='<table class="ktab"><tr><th>School</th><th>Ordered</th>'+(anyConf?'<th>Distributed</th>':'')+'</tr>';
+    var tO=0,tD=0;
+    k.rows.forEach(function(x){
+      var sub=(x.type==='Kitchen'?'Kitchen school · ':'')+'enrolled '+x.students+(x.type!=='Kitchen'&&x.monitor&&x.monitor!==S.user.name?' · '+esc(x.monitor):'');
+      var oc = x.canOrder ? '<input type="number" inputmode="numeric" min="0" id="ko_'+x.id+'" class="'+(x.late?'late':'')+'" value="'+(x.ordered===null?'':x.ordered)+'" placeholder="–">'
+                          : (x.ordered===null?'–':x.ordered);
+      var dc='';
+      if(anyConf){
+        if(!x.confirmed) dc = x.ordered===null?'':'<span class="mini">waiting</span>';
+        else if(x.canDist) dc='<input type="number" inputmode="numeric" min="0" id="kd_'+x.id+'" data-v="'+x.dist+'" class="'+(x.status==='Changed'?'chg':'')+'" value="'+x.dist+'" oninput="kDistInput(\''+x.id+'\')">';
+        else dc='<b>'+x.dist+'</b>';
+      }
+      if(x.ordered!==null) tO+=x.ordered; if(x.confirmed&&x.dist!==null) tD+=x.dist;
+      h+='<tr class="'+(x.works&&x.ordered===null?'miss':'')+'"><td class="nm">'+esc(x.name)+'<small>'+sub+'</small><small>'+kChip(x)+'</small></td><td>'+oc+'</td>'+(anyConf?'<td>'+dc+'</td>':'')+'</tr>';
+      if(x.canDist) h+='<tr class="sub hidden" id="ks_'+x.id+'"><td colspan="'+(anyConf?3:2)+'"><select id="kr_'+x.id+'">'+reasons+'</select><input id="kn_'+x.id+'" placeholder="Details (optional)"></td></tr>';
+      if(x.pending) h+='<tr class="sub"><td colspan="'+(anyConf?3:2)+'"><div class="req">Change requested by '+esc(x.pending.by)+': <b>'+x.dist+' → '+x.pending.value+'</b> ('+esc(x.pending.reason)+')'+
+        (x.canDecide?'<div class="act"><button class="btn ok2" onclick="kDecide(\''+x.id+'\',\'Approved\')">Approve</button><button class="btn no" onclick="kDecide(\''+x.id+'\',\'Rejected\')">Reject</button></div>':' – waiting for approval.')+'</div></td></tr>';
+    });
+    h+='<tr class="tot"><td style="text-align:left">Total</td><td>'+tO.toLocaleString()+'</td>'+(anyConf?'<td>'+tD.toLocaleString()+'</td>':'')+'</tr></table>';
+    var canSend=k.rows.some(function(x){return x.canOrder && !(k.canConfirm && x.id===k.id);});
+    if(canSend) h+='<button class="btn'+(k.canConfirm?' sec':'')+'" onclick="kSend(\''+k.id+'\')">Send to kitchen</button>';
+    if(k.canConfirm && (!k.confirmed || k.waiting || k.rows.some(function(x){return x.canOrder;}))){
+      var mopt=r.menus.map(function(x){return '<option'+(x===(k.menu||k.menuDefault||r.menuDefault)?' selected':'')+'>'+esc(x)+'</option>';}).join('');
+      h+='<label for="km_'+k.id+'">Menu of the day</label><select id="km_'+k.id+'"><option value="">Choose the menu</option>'+mopt+'</select>'+
+         '<button class="btn" onclick="kConfirm(\''+k.id+'\')">'+(k.confirmed?'Confirm again':'Confirm order')+'</button>';
+    }
+    if(k.rows.some(function(x){return x.canDist;})) h+='<button class="btn" onclick="kSaveDist(\''+k.id+'\')">Save distributed</button>';
+    return h+(fold?'</details>':'</div>');
+  }).join('');
+  if(r.isToday && S.kb){ S.kb.confirm=conf; kBadge(); }
+}
+function kDistInput(id){
+  var el=$('kd_'+id), changed=String(el.value)!==String(el.getAttribute('data-v'));
+  $('ks_'+id).classList.toggle('hidden',!changed); el.classList.toggle('chg',changed);
+}
+function kRows(kid){ return S.k.kitchens.filter(function(k){return k.id===kid;})[0].rows; }
+function kDone(msg){ busy(false); show($('kOk'),msg); loadKitchen(); window.scrollTo(0,0); }
+function kFail(e){ busy(false); show($('kErr'),e); window.scrollTo(0,0); }
+function kOrders(kid, skip){
+  return kRows(kid).filter(function(x){ return x.canOrder && x.id!==skip && $('ko_'+x.id) && $('ko_'+x.id).value!=='' && String($('ko_'+x.id).value)!==String(x.ordered); })
+    .map(function(x){ return {id:x.id, qty:$('ko_'+x.id).value}; });
+}
+function kSend(kid){
+  var e=kOrders(kid, null); show($('kOk'),''); show($('kErr'),'');
+  if(!e.length){ show($('kErr'),'Enter the number of sandwiches needed first.'); return; }
+  busy(true);
+  call('apiKitchenOrder',S.uid,S.pin,S.k.ds,S.k.shift,e).then(function(r){ kDone('Sent to the kitchen'+(r.late?' (after the cut-off – marked late)':'')+'.'); }).catch(kFail);
+}
+function kConfirm(kid){
+  var menu=$('km_'+kid).value, own=$('ko_'+kid)?$('ko_'+kid).value:'';
+  show($('kOk'),''); show($('kErr'),'');
+  if(!menu){ show($('kErr'),'Choose the menu of the day.'); return; }
+  if($('ko_'+kid) && own===''){ show($('kErr'),'Enter the number of sandwiches for the kitchen school.'); return; }
+  var others=kOrders(kid, kid);
+  busy(true);
+  (others.length ? call('apiKitchenOrder',S.uid,S.pin,S.k.ds,S.k.shift,others) : Promise.resolve())
+    .then(function(){ return call('apiKitchenConfirm',S.uid,S.pin,kid,S.k.ds,S.k.shift,menu,own); })
+    .then(function(r){ kDone('Order confirmed ('+r.confirmed+' school'+(r.confirmed===1?'':'s')+'). The number distributed now equals the order.'); }).catch(kFail);
+}
+function kSaveDist(kid){
+  show($('kOk'),''); show($('kErr'),'');
+  var e=[], miss=false;
+  kRows(kid).forEach(function(x){
+    var el=$('kd_'+x.id); if(!x.canDist||!el) return;
+    if(String(el.value)===String(x.dist)) return;
+    var rs=$('kr_'+x.id).value; if(!rs) miss=true;
+    e.push({id:x.id, qty:el.value, reason:rs, note:$('kn_'+x.id).value});
+  });
+  if(!e.length){ show($('kErr'),'Nothing changed.'); return; }
+  if(miss){ show($('kErr'),'Choose a reason for each change.'); return; }
+  busy(true);
+  call('apiKitchenDist',S.uid,S.pin,S.k.ds,S.k.shift,e).then(function(r){
+    kDone(r.pending ? 'Sent to your Project Officer for approval.' : 'Saved. The change is highlighted on the sheet.');
+  }).catch(kFail);
+}
+function kDecide(id, d){
+  busy(true);
+  call('apiKitchenDecide',S.uid,S.pin,id,S.k.shift,S.k.ds,d,'').then(function(){ if(S.kb&&S.kb.approve) S.kb.approve--; kBadge(); kDone(d==='Approved'?'Change approved.':'Change rejected.'); }).catch(kFail);
 }
 
 /* ---------- weekly plan ---------- */
@@ -526,7 +744,7 @@ function telLink(v){ return v ? '<a class="tel" href="tel:'+esc(String(v).replac
 function renderInfo(){
   var r=S.info, s=r.school, hasPM=s.hasPM || (r.shifts.indexOf('PM')>=0 && s.pm>0);
   $('iBody').classList.remove('hidden');
-  $('iName').textContent=s.name; $('iMeta').textContent=s.village+' · '+s.area+' · Monitor: '+s.monitor+' · PO: '+(s.po||'–');
+  $('iName').textContent=s.name; $('iMeta').textContent=(s.kitchen?s.kitchen+' · ':'')+s.village+' · '+s.area+' · Monitor: '+s.monitor+' · PO: '+(s.po||'–');
   $('iStudents').innerHTML='<div class="chips"><span class="chip">AM: <b>'+s.am+'</b></span>'+(r.shifts.indexOf('PM')>=0||s.pm?'<span class="chip">PM: <b>'+s.pm+'</b></span>':'')+'</div>';
   $('iPending').innerHTML=r.pending.map(function(q){ return '<div class="req">Waiting for approval: <b>'+q.shift+' '+q.current+' → '+q.requested+'</b> · '+esc(q.reason)+' · '+esc(q.by)+'</div>'; }).join('');
   $('iShift').innerHTML=r.shifts.map(function(x){return '<option>'+x+'</option>';}).join('') || '<option>AM</option>';
@@ -580,7 +798,7 @@ function loadOps(){
 }
 function renderOps(){
   var r=S.ops; $('oBody').classList.remove('hidden');
-  $('oName').textContent=r.school.name; $('oMeta').textContent=r.school.village+' · week '+r.weekLabel;
+  $('oName').textContent=r.school.name; $('oMeta').textContent=(r.school.kitchen?r.school.kitchen+' · ':'')+r.school.village+' · week '+r.weekLabel;
   var h='', any=false;
   Object.keys(r.shifts).forEach(function(sh){
     var x=r.shifts[sh];
