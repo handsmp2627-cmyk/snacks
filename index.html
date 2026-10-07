@@ -69,6 +69,10 @@
   .spin{position:fixed;inset:0;background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;z-index:20}
   .spin div{width:34px;height:34px;border:4px solid #c9d3e6;border-top-color:var(--navy);border-radius:50%;animation:r 0.8s linear infinite}
   @keyframes r{to{transform:rotate(360deg)}}
+  .stale input,.stale select,.stale textarea,.stale button,.stale .dchip,.stale details{pointer-events:none}
+  .stale{opacity:.6;transition:opacity .2s}
+  .upd{position:fixed;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--navy2) 0 30%,transparent 30%);background-size:200% 100%;animation:u 1s linear infinite;z-index:30}
+  @keyframes u{from{background-position:100% 0}to{background-position:-100% 0}}
   .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;background:#eef2f9;color:#2b3a55;margin-left:6px}
   .next{display:flex;gap:10px}
   .next .btn{margin-top:10px}
@@ -106,6 +110,9 @@
   .ktab input{width:72px;padding:8px 2px}
   .ktab input.chg{background:var(--amber);border-color:#e3b17a}
   .ktab input.late{background:var(--yellow)}
+  .ktab input.over{background:var(--red);border-color:#e09a9a;color:var(--redT);font-weight:700}
+  .overt{color:var(--redT)}
+  .ktab td.nm small.overmsg{color:var(--redT);font-weight:600}
   .ktab tr.sub td{border-bottom:1px solid var(--line);padding:4px 3px 10px;text-align:left}
   .ktab tr.sub select,.ktab tr.sub input{width:100%;padding:8px;font-size:13px;margin-top:4px}
   .ktab tr.tot td{font-weight:700;border-bottom:0;background:#f6f8fb}
@@ -323,6 +330,7 @@
 </section>
 </main>
 <div class="spin hidden" id="spin"><div></div></div>
+<div class="upd hidden" id="upd">Updating…</div>
 
 
 <script>
@@ -333,6 +341,9 @@ var S = { user:null, uid:'', pin:'', schools:[], reasons:[], plan:null, daily:nu
 function $(id){ return document.getElementById(id); }
 /* Calls that are safe to repeat automatically if Google returns an error page (busy server). */
 var NO_RETRY = { apiDecide:1, apiRequestStudents:1 };
+var DEBUG = /[?&]debug=1/.test(location.search);
+function dbg(fn, srv, tot){ var d=$('dbg'); if(!d){ d=document.createElement('div'); d.id='dbg'; d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#111;color:#0f0;font:11px monospace;padding:4px 8px;z-index:40;max-height:30vh;overflow:auto'; document.body.appendChild(d); }
+  d.innerHTML='<div>'+fn+': server '+(srv/1000).toFixed(2)+' s · total '+(tot/1000).toFixed(2)+' s · Google/network '+((tot-srv)/1000).toFixed(2)+' s</div>'+d.innerHTML; }
 var BUSY_MSG = 'The server is busy right now. Please wait a few seconds and try again.';
 function call(fn){
   var args = Array.prototype.slice.call(arguments,1);
@@ -340,10 +351,12 @@ function call(fn){
   function once(){
     if(!(window.google && google.script && google.script.run)){
       // GitHub Pages mode: text/plain POST keeps it a simple request (no CORS preflight)
+      var t0=Date.now();
       return fetch(API_URL,{method:'POST',body:JSON.stringify({fn:fn,args:args}),redirect:'follow'})
         .then(function(r){ return r.text(); }, function(){ throw {retry:true, msg:'No connection – check your internet and try again.'}; })
         .then(function(t){
           var j; try{ j = JSON.parse(t); }catch(e){ throw {retry:true, msg:BUSY_MSG}; } // Google sent an error page instead of data
+          if(DEBUG) dbg(fn, j.ms, Date.now()-t0);
           if(j.error){ if(/lock|timed out|too many|try again later|service invoked/i.test(j.error)) throw {retry:true, msg:BUSY_MSG}; throw j.error; }
           return j.result;
         });
@@ -368,6 +381,31 @@ function call(fn){
   return attempt(1);
 }
 function busy(on){ $('spin').classList.toggle('hidden',!on); }
+/* Screens are kept on the phone: the last copy shows at once (greyed, not editable) while the fresh one loads. */
+var SWR = { tok:{} };
+function cKey(fn,args){ return 'snc|'+S.uid+'|'+fn+'|'+JSON.stringify(args.slice(2)); }
+function cGet(k, withAge){ try{ var x=JSON.parse(load(k)||'null'); if(!x) return null; if(x.__t===undefined) return withAge?{v:x,age:1e9}:x; return withAge?{v:x.v,age:Date.now()-x.__t,pre:!!x.pre}:x.v; }catch(e){ return null; } }
+function cPut(k,v,pre){
+  try{
+    var idx=JSON.parse(load('snc_idx')||'[]').filter(function(x){return x!==k;}); idx.push(k);
+    while(idx.length>40){ store(idx.shift(),null); }
+    localStorage.setItem(k,JSON.stringify({__t:Date.now(),v:v,pre:pre?1:0})); store('snc_idx',JSON.stringify(idx));
+  }catch(e){ try{ localStorage.removeItem('snc_idx'); }catch(x){} }
+}
+var UPD=0;
+function upd(d){ UPD=Math.max(0,UPD+d); $('upd').classList.toggle('hidden',UPD===0); }
+function staleOn(el,on){ if(el) el.classList.toggle('stale',on); upd(on?1:-1); }
+function swr(view, bodyEl, fn, args, onData, onErr){
+  var key=cKey(fn,args), ca=cGet(key,true), c=ca&&ca.v, tok=(SWR.tok[view]=(SWR.tok[view]||0)+1);
+  if(c && ca.pre && ca.age<60000){ cPut(key,c); onData(c,false); return; } // loaded in the background right after sign-in: use it once as is
+  if(c){ onData(c,true); staleOn(bodyEl,true); } else busy(true);
+  call.apply(null,[fn].concat(args)).then(function(r){
+    if(c) staleOn(bodyEl,false);
+    if(SWR.tok[view]!==tok) return;
+    busy(false); cPut(key,r); onData(r,false);
+  }).catch(function(e){ if(c) staleOn(bodyEl,false); if(SWR.tok[view]!==tok) return; busy(false); onErr(e); });
+}
+function todayLocal(){ try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Beirut'}).format(new Date()); }catch(e){ return new Date().toISOString().substr(0,10); } }
 function show(el,msg){ el.textContent = msg||''; el.style.display = msg ? 'block':'none'; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function store(k,v){ try{ v==null?localStorage.removeItem(k):localStorage.setItem(k,v);}catch(e){} }
@@ -383,8 +421,7 @@ busy(true);
   var su=load('snk_uid'), sp=load('snk_pin');
   if(sp && su && (!qu || qu.toUpperCase()===su)){ S.autoLogin=true; $('lRem').checked=true; doLogin(su, sp, true); }
 })();
-call('apiBoot').then(function(b){
-  if(!S.autoLogin) busy(false);
+function fillUsers(b){
   if(!S.user) $('hsub').textContent = 'HAND';
   var groups = {}; b.users.forEach(function(u){ (groups[u.role]=groups[u.role]||[]).push(u); });
   var order=['Area Monitor','Project Officer','Senior Project Officer','Project Manager','Viewer'];
@@ -397,7 +434,12 @@ call('apiBoot').then(function(b){
   var qu=null; try{ qu=new URLSearchParams(location.search).get('u'); }catch(e){}
   var last=(qu||'').toUpperCase()||load('snk_uid'); if(last) $('lUser').value=last;
   if(S.autoLogin && load('snk_uid')) $('lUser').value=load('snk_uid');
-}).catch(function(e){ if(!S.autoLogin){ busy(false); show($('lErr'),e); } });
+}
+(function(){
+  var cb=cGet('snb'); if(cb){ fillUsers(cb); if(!S.autoLogin) busy(false); }
+  call('apiBoot').then(function(b){ if(!S.autoLogin) busy(false); cPut('snb',b); var cur=$('lUser').value; fillUsers(b); if(cur) $('lUser').value=cur; })
+    .catch(function(e){ if(!S.autoLogin && !cb){ busy(false); show($('lErr'),e); } });
+})();
 
 $('lPin').addEventListener('keydown',function(e){ if(e.key==='Enter') login(); });
 function login(){
@@ -406,10 +448,26 @@ function login(){
   doLogin(uid, pin, false);
 }
 function doLogin(uid, pin, auto){
-  busy(true); show($('lErr'),'');
+  show($('lErr'),'');
+  var cached = auto ? cGet('snl|'+uid) : null;
+  if(cached){ busy(false); applyLogin(cached, uid, pin); go('home'); upd(1); } // instant start from the last session
+  else busy(true);
   call('apiLogin',uid,pin).then(function(r){
-    S.autoLogin=false;
-    busy(false);
+    S.autoLogin=false; busy(false); if(cached) upd(-1);
+    cPut('snl|'+uid, r);
+    applyLogin(r, uid, pin);
+    if(!cached) go('home');
+    if(r.kitchen && r.kitchen.count) call('apiKitchen',uid,pin,todayLocal(),'').then(function(k){ cPut(cKey('apiKitchen',[uid,pin,todayLocal(),'']),k,true); }).catch(function(){}); // ready before the tile is tapped
+  }).catch(function(e){
+    S.autoLogin=false; busy(false); if(cached) upd(-1);
+    var bad=/PIN|not correct|Too many/i.test(e);
+    if(!auto || bad) store('snk_pin',null); // keep the saved PIN if it was only a connection problem
+    if(cached && !bad) return; // offline or busy: keep working from the last session
+    if(cached){ store('snl|'+uid,null); go('login'); }
+    show($('lErr'),e);
+  });
+}
+function applyLogin(r, uid, pin){
     S.user=r.user; S.uid=uid; S.pin=pin; S.schools=r.schools; S.infoSchools=r.infoSchools||r.schools; S.reasons=r.reasons; S.now=r.now; S.weeks=r.weeks; S.rules=r.rules;
     store('snk_uid',uid); store('snk_pin', $('lRem').checked ? pin : null);
     $('hsub').textContent = r.user.name+' · '+r.user.role;
@@ -439,14 +497,8 @@ function doLogin(uid, pin, auto){
     else if(kr) $('rules').innerHTML += '<br>'+kr;
     $('lPin').value='';
     if(!r.user.canEnter){ $('pSave').classList.add('hidden'); }
-    go('home');
-  }).catch(function(e){
-    S.autoLogin=false; busy(false);
-    if(!auto || /PIN|not correct|Too many/i.test(e)) store('snk_pin',null); // keep the saved PIN if it was only a connection problem
-    show($('lErr'),e);
-  });
 }
-function signOut(){ S.user=null; S.pin=''; store('snk_pin',null); go('login'); }
+function signOut(){ if(S.uid) store('snl|'+S.uid,null); S.user=null; S.pin=''; store('snk_pin',null); go('login'); }
 function go(v){
   ['login','home','info','ops','plan','daily','kitchen'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
   $('btnBack').classList.toggle('hidden', v==='login'||v==='home');
@@ -492,9 +544,9 @@ function kBadge(){
 }
 function initKitchen(){ K.shift=''; $('kDate').innerHTML=''; show($('kErr'),''); show($('kOk'),''); loadKitchen(); }
 function loadKitchen(){
-  busy(true); show($('kErr'),'');
-  call('apiKitchen',S.uid,S.pin,$('kDate').value||'',K.shift||'').then(function(r){ busy(false); S.k=r; K.shift=r.shift; renderKitchen(); })
-    .catch(function(e){ busy(false); show($('kErr'),e); });
+  show($('kErr'),'');
+  swr('kitchen', $('kBody'), 'apiKitchen', [S.uid,S.pin,$('kDate').value||todayLocal(),K.shift||''],
+    function(r){ S.k=r; K.shift=r.shift; renderKitchen(); }, function(e){ show($('kErr'),e); });
 }
 function kSetShift(sh){ K.shift=sh; show($('kOk'),''); loadKitchen(); }
 function kChip(row){
@@ -538,16 +590,17 @@ function renderKitchen(){
     var tO=0,tD=0;
     k.rows.forEach(function(x){
       var sub=(x.type==='Kitchen'?'Kitchen school · ':'')+'enrolled '+x.students+(x.type!=='Kitchen'&&x.monitor&&x.monitor!==S.user.name?' · '+esc(x.monitor):'');
-      var oc = x.canOrder ? '<input type="number" inputmode="numeric" min="0" id="ko_'+x.id+'" class="'+(x.late?'late':'')+'" value="'+(x.ordered===null?'':x.ordered)+'" placeholder="–">'
-                          : (x.ordered===null?'–':x.ordered);
+      var oOver = x.ordered!==null && x.ordered>x.students, dOver = x.dist!==null && x.dist>x.students;
+      var oc = x.canOrder ? '<input type="number" inputmode="numeric" min="0" id="ko_'+x.id+'" data-st="'+x.students+'" class="'+(oOver?'over':x.late?'late':'')+'" value="'+(x.ordered===null?'':x.ordered)+'" placeholder="–" oninput="kOver(this)">'
+                          : (x.ordered===null?'–':(oOver?'<b class="overt">'+x.ordered+'</b>':x.ordered));
       var dc='';
       if(anyConf){
         if(!x.confirmed) dc = x.ordered===null?'':'<span class="mini">waiting</span>';
-        else if(x.canDist) dc='<input type="number" inputmode="numeric" min="0" id="kd_'+x.id+'" data-v="'+x.dist+'" class="'+(x.status==='Changed'?'chg':'')+'" value="'+x.dist+'" oninput="kDistInput(\''+x.id+'\')">';
-        else dc='<b>'+x.dist+'</b>';
+        else if(x.canDist) dc='<input type="number" inputmode="numeric" min="0" id="kd_'+x.id+'" data-v="'+x.dist+'" data-st="'+x.students+'" class="'+(dOver?'over':x.status==='Changed'?'chg':'')+'" value="'+x.dist+'" oninput="kDistInput(\''+x.id+'\')">';
+        else dc='<b'+(dOver?' class="overt"':'')+'>'+x.dist+'</b>';
       }
       if(x.ordered!==null) tO+=x.ordered; if(x.confirmed&&x.dist!==null) tD+=x.dist;
-      h+='<tr class="'+(x.works&&x.ordered===null?'miss':'')+'"><td class="nm">'+esc(x.name)+'<small>'+sub+'</small><small>'+kChip(x)+'</small></td><td>'+oc+'</td>'+(anyConf?'<td>'+dc+'</td>':'')+'</tr>';
+      h+='<tr class="'+(x.works&&x.ordered===null?'miss':'')+'"><td class="nm">'+esc(x.name)+'<small>'+sub+'</small><small>'+kChip(x)+'</small><small class="overmsg'+(oOver||dOver?'':' hidden')+'" id="kw_'+x.id+'">Above enrolment ('+x.students+')</small></td><td>'+oc+'</td>'+(anyConf?'<td>'+dc+'</td>':'')+'</tr>';
       if(x.canDist) h+='<tr class="sub hidden" id="ks_'+x.id+'"><td colspan="'+(anyConf?3:2)+'"><select id="kr_'+x.id+'">'+reasons+'</select><input id="kn_'+x.id+'" placeholder="Details (optional)"></td></tr>';
       if(x.pending) h+='<tr class="sub"><td colspan="'+(anyConf?3:2)+'"><div class="req">Change requested by '+esc(x.pending.by)+': <b>'+x.dist+' → '+x.pending.value+'</b> ('+esc(x.pending.reason)+')'+
         (x.canDecide?'<div class="act"><button class="btn ok2" onclick="kDecide(\''+x.id+'\',\'Approved\')">Approve</button><button class="btn no" onclick="kDecide(\''+x.id+'\',\'Rejected\')">Reject</button></div>':' – waiting for approval.')+'</div></td></tr>';
@@ -568,9 +621,18 @@ function renderKitchen(){
 function kDistInput(id){
   var el=$('kd_'+id), changed=String(el.value)!==String(el.getAttribute('data-v'));
   $('ks_'+id).classList.toggle('hidden',!changed); el.classList.toggle('chg',changed);
+  kOver(el);
+}
+/* red when the number is above the school's enrolment for that shift */
+function kOver(el){
+  var st=+el.getAttribute('data-st'), v=el.value===''?null:+el.value, over=v!==null && v>st;
+  el.classList.toggle('over',over); if(over) el.classList.remove('late');
+  var id=el.id.substr(3), w=$('kw_'+id);
+  if(w){ var o=$('ko_'+id), d=$('kd_'+id);
+    var any=(o&&o.classList.contains('over'))||(d&&d.classList.contains('over')); w.classList.toggle('hidden',!any); }
 }
 function kRows(kid){ return S.k.kitchens.filter(function(k){return k.id===kid;})[0].rows; }
-function kDone(msg){ busy(false); show($('kOk'),msg); loadKitchen(); window.scrollTo(0,0); }
+function kDone(msg){ busy(false); store(cKey('apiKitchen',[S.uid,S.pin,$('kDate').value||todayLocal(),K.shift||'']),null); show($('kOk'),msg); loadKitchen(); window.scrollTo(0,0); }
 function kFail(e){ busy(false); show($('kErr'),e); window.scrollTo(0,0); }
 function kOrders(kid, skip){
   return kRows(kid).filter(function(x){ return x.canOrder && x.id!==skip && $('ko_'+x.id) && $('ko_'+x.id).value!=='' && String($('ko_'+x.id).value)!==String(x.ordered); })
@@ -631,9 +693,8 @@ function loadPlanStatus(){
 function loadPlan(){
   var sid=$('pSchool').value; show($('pErr'),''); show($('pOk'),''); $('pNext').classList.add('hidden');
   if(!sid){ $('pBody').classList.add('hidden'); return; }
-  busy(true);
-  call('apiGetPlan',S.uid,S.pin,sid,$('pWeek').value).then(function(r){ busy(false); S.plan=r; renderPlan(); })
-    .catch(function(e){ busy(false); show($('pErr'),e); $('pBody').classList.remove('hidden'); });
+  swr('plan', $('pBody'), 'apiGetPlan', [S.uid,S.pin,sid,$('pWeek').value], function(r){ S.plan=r; renderPlan(); },
+    function(e){ show($('pErr'),e); $('pBody').classList.remove('hidden'); });
 }
 function renderPlan(){
   var r=S.plan, s=r.school, hasPM=s.hasPM;
@@ -715,7 +776,7 @@ function savePlan(){
     show($('pOk'),'Saved '+r.saved+' figure(s)'+(r.flagged?' – marked as changed with your reason.':'.'));
     $('pNext').classList.remove('hidden');
     call('apiStatus',S.uid,S.pin,$('pWeek').value,S.now.ds).then(function(st){ schoolOpts($('pSchool'),st,'p'); });
-    return call('apiGetPlan',S.uid,S.pin,s.id,S.plan.week).then(function(x){ S.plan=x; renderPlan(); show($('pOk'),'Saved '+r.saved+' figure(s)'+(r.flagged?' – marked as changed with your reason.':'.')); $('pNext').classList.remove('hidden'); });
+    return call('apiGetPlan',S.uid,S.pin,s.id,S.plan.week).then(function(x){ cPut(cKey('apiGetPlan',[S.uid,S.pin,s.id,S.plan.week]),x); S.plan=x; renderPlan(); show($('pOk'),'Saved '+r.saved+' figure(s)'+(r.flagged?' – marked as changed with your reason.':'.')); $('pNext').classList.remove('hidden'); });
   }).catch(function(e){ busy(false); show($('pErr'),e); });
 }
 function nextSchool(k){
@@ -748,14 +809,13 @@ function loadApprovals(){
 function decide(id,dec){
   var note = dec==='Rejected' ? (prompt('Reason for rejecting (optional):')||'') : '';
   busy(true);
-  call('apiDecide',S.uid,S.pin,id,dec,note).then(function(){ busy(false); loadApprovals(); if($('iSchool').value) loadInfo(); })
+  call('apiDecide',S.uid,S.pin,id,dec,note).then(function(){ busy(false); loadApprovals(); if($('iSchool').value){ store(cKey('apiGetInfo',[S.uid,S.pin,$('iSchool').value]),null); loadInfo(); } })
     .catch(function(e){ busy(false); alert(e); });
 }
 function loadInfo(){
   var sid=$('iSchool').value; show($('iErr'),''); show($('iOk'),'');
   if(!sid){ $('iBody').classList.add('hidden'); return; }
-  busy(true);
-  call('apiGetInfo',S.uid,S.pin,sid).then(function(r){ busy(false); S.info=r; renderInfo(); }).catch(function(e){ busy(false); alert(e); });
+  swr('info', $('iBody'), 'apiGetInfo', [S.uid,S.pin,sid], function(r){ S.info=r; renderInfo(); }, function(e){ if($('iBody').classList.contains('hidden')) alert(e); else show($('iErr'),e); });
 }
 function telLink(v){ return v ? '<a class="tel" href="tel:'+esc(String(v).replace(/\s/g,''))+'">'+esc(v)+'</a>' : '<span class="meta">–</span>'; }
 function renderInfo(){
@@ -788,14 +848,14 @@ function sendRequest(){
   call('apiRequestStudents',S.uid,S.pin,S.info.school.id,$('iShift').value,+v,rs,$('iNote').value.trim()).then(function(x){
     busy(false); $('iNote').value='';
     show($('iOk'), x.status==='Approved' ? 'Saved – the new number applies now.' : 'Sent to your Project Officer for approval ('+x.id+'). The current number stays until it is approved.');
-    loadInfo(); loadApprovals();
+    store(cKey('apiGetInfo',[S.uid,S.pin,$('iSchool').value]),null); loadInfo(); loadApprovals();
   }).catch(function(e){ busy(false); alert(e); });
 }
 function saveInfo(){
   var f={}; document.querySelectorAll('#iFields [data-k]').forEach(function(el){ f[el.dataset.k]=el.value; });
   show($('iErr'),''); show($('iOk'),''); busy(true);
   call('apiSaveInfo',S.uid,S.pin,S.info.school.id,f).then(function(x){
-    busy(false); show($('iOk'), x.saved ? 'Saved '+x.saved+' change(s).' : 'Nothing changed.'); if(x.saved) loadInfo();
+    busy(false); show($('iOk'), x.saved ? 'Saved '+x.saved+' change(s).' : 'Nothing changed.'); if(x.saved){ store(cKey('apiGetInfo',[S.uid,S.pin,$('iSchool').value]),null); loadInfo(); }
   }).catch(function(e){ busy(false); show($('iErr'),e); });
 }
 
@@ -810,8 +870,8 @@ function initOps(){
 function loadOps(){
   var sid=$('oSchool').value; show($('oErr'),''); show($('oOk'),''); $('oNext').classList.add('hidden');
   if(!sid){ $('oBody').classList.add('hidden'); return; }
-  busy(true);
-  call('apiGetOps',S.uid,S.pin,sid,$('oWeek').value).then(function(r){ busy(false); S.ops=r; renderOps(); }).catch(function(e){ busy(false); show($('oErr'),e); $('oBody').classList.remove('hidden'); });
+  swr('ops', $('oBody'), 'apiGetOps', [S.uid,S.pin,sid,$('oWeek').value], function(r){ S.ops=r; renderOps(); },
+    function(e){ show($('oErr'),e); $('oBody').classList.remove('hidden'); });
 }
 function renderOps(){
   var r=S.ops; $('oBody').classList.remove('hidden');
@@ -854,7 +914,7 @@ function saveOps(){
     if(x.added.length) msg+=' Opened: '+x.added.join(', ')+' – add the snacks for these days in the weekly plan.';
     if(x.zeroed) msg+=' '+x.zeroed+' planned day(s) set to 0.';
     show($('oOk'),msg); $('oNext').classList.toggle('hidden',!x.added.length);
-    call('apiGetOps',S.uid,S.pin,S.ops.school.id,S.ops.week).then(function(r){ S.ops=r; renderOps(); show($('oOk'),msg); $('oNext').classList.toggle('hidden',!x.added.length); });
+    call('apiGetOps',S.uid,S.pin,S.ops.school.id,S.ops.week).then(function(r){ cPut(cKey('apiGetOps',[S.uid,S.pin,S.ops.school.id,S.ops.week]),r); S.ops=r; renderOps(); show($('oOk'),msg); $('oNext').classList.toggle('hidden',!x.added.length); });
   }).catch(function(e){ busy(false); show($('oErr'),e); });
 }
 function opsToPlan(){
@@ -879,9 +939,8 @@ function loadDailyStatus(){
 function loadDaily(){
   var sid=$('dSchool').value; show($('dErr'),''); show($('dOk'),''); $('dNext').classList.add('hidden');
   if(!sid){ $('dBody').classList.add('hidden'); return; }
-  busy(true);
-  call('apiGetDaily',S.uid,S.pin,sid,$('dDate').value).then(function(r){ busy(false); S.daily=r; renderDaily(); })
-    .catch(function(e){ busy(false); show($('dErr'),e); });
+  swr('daily', $('dBody'), 'apiGetDaily', [S.uid,S.pin,sid,$('dDate').value], function(r){ S.daily=r; renderDaily(); },
+    function(e){ show($('dErr'),e); });
 }
 function renderDaily(){
   var r=S.daily, s=r.school;
@@ -959,7 +1018,7 @@ function saveDaily(){
     busy(false);
     var msg='Saved.'+(res.warnings&&res.warnings.length?' Note: '+res.warnings.join(' '):'');
     call('apiStatus',S.uid,S.pin,S.now.ds,$('dDate').value).then(function(st){ schoolOpts($('dSchool'),st,'d'); });
-    return call('apiGetDaily',S.uid,S.pin,r.school.id,r.ds).then(function(x){ S.daily=x; renderDaily(); show($('dOk'),msg); $('dNext').classList.remove('hidden'); });
+    return call('apiGetDaily',S.uid,S.pin,r.school.id,r.ds).then(function(x){ cPut(cKey('apiGetDaily',[S.uid,S.pin,r.school.id,r.ds]),x); S.daily=x; renderDaily(); show($('dOk'),msg); $('dNext').classList.remove('hidden'); });
   }).catch(function(e){ busy(false); show($('dErr'),e); });
 }
 
