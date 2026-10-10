@@ -559,6 +559,7 @@ function loadKitchen(){
 }
 function kSetShift(sh){ K.shift=sh; show($('kOk'),''); loadKitchen(); }
 function kChip(row){
+  if(row.onSnacks && row.ordered===null) return '<span class="st n">On snacks – no sandwiches needed</span>';
   if(!row.confirmed){
     if(row.ordered===null) return row.works ? '<span class="st y">Not sent</span>' : '<span class="st n">No school today</span>';
     return '<span class="st '+(row.late?'y':'g')+'">Sent '+esc(row.orderedAt)+(row.late?' · late':'')+'</span>';
