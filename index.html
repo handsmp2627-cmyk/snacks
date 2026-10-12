@@ -166,7 +166,7 @@
 <section id="v-home" class="hidden">
   <div class="tiles">
     <button class="tile inf" onclick="go('info')" style="border-left-color:#548235"><b>School info <span id="tInfoBadge"></span></b><span>Students, recess time, contacts and working days. Request a change to student numbers.</span></button>
-    <button class="tile inf" onclick="go('ops')" style="border-left-color:#bf8f00"><b>Operations</b><span id="tOps">Open or close school days for next week – this week only or permanently.</span></button>
+    <button class="tile inf" id="tOpsTile" onclick="go('ops')" style="border-left-color:#bf8f00"><b>Operations</b><span id="tOps">Open or close school days for next week – this week only or permanently.</span></button>
     <button class="tile hidden" id="tKitchen" onclick="go('kitchen')" style="border-left-color:#c55a11"><b>Kitchen sandwiches <span id="tKBadge"></span></b><span id="tKText">Sandwiches needed per school, kitchen confirmation and the number distributed.</span></button>
     <button class="tile snk" onclick="go('plan')"><b>Weekly snack plan</b><span id="tPlan">Forecast per school, day and shift.</span></button>
     <button class="tile snk" onclick="go('daily')"><b>Snacks distribution</b><span id="tDaily">Received, distributed and leftovers – every day.</span></button>
@@ -506,6 +506,12 @@ function applyLogin(r, uid, pin){
     else if(kr) $('rules').innerHTML += '<br>'+kr;
     $('lPin').value='';
     if(!r.user.canEnter){ $('pSave').classList.add('hidden'); }
+    if(r.user.infoOnly){ // MEAL: School info only, view only
+      Array.prototype.forEach.call(document.querySelectorAll('.tile.snk'), function(t){ t.classList.add('hidden'); });
+      $('tKitchen').classList.add('hidden'); $('tOpsTile').classList.add('hidden'); $('tInfoBadge').innerHTML='';
+      var ti=document.querySelector('.tile.inf > span'); if(ti) ti.textContent='Students, recess time, contacts and working days – view only.';
+      $('rules').innerHTML='• <b>School info</b>: view only – students, recess times, contacts and working days for every school.';
+    }
 }
 function signOut(){ if(S.uid) store('snl|'+S.uid,null); S.user=null; S.pin=''; store('snk_pin',null); go('login'); }
 function go(v){
