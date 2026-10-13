@@ -125,8 +125,12 @@
   .lhd{font-size:12px;color:#2b3a55;margin-bottom:6px}
   .lrow{display:flex;gap:8px}.lrow label{flex:1;font-size:12px;margin:0}
   .ktab tr.sub .lrow input{width:100%;font-size:16px;text-align:center}
-  .lchk{font-size:12px;margin:6px 0 2px;color:var(--muted)}.lchk.ok{color:#2e7d32;font-weight:600}.lchk.bad{color:var(--redT);font-weight:700}
+  .lchk{font-size:12px;margin:6px 0 2px;color:var(--muted)}.lchk.good{color:#2e7d32;font-weight:600}.lchk.bad{color:var(--redT);font-weight:700}
   .lbox .act{display:flex;gap:8px;margin-top:8px}.lbox .act .btn{margin:0;padding:10px}
+  .algs{display:block;font-size:11px;color:#9a5b00;direction:ltr;text-align:right;font-weight:600}
+  .algbox{background:#fff8ec;border:1px solid #f0d3a6;border-radius:9px;padding:8px 10px;margin-top:10px;font-size:13px;color:#5c3b00}
+  .algbox b{color:#7a4a00}
+  ul.alt{margin:6px 0 0;padding-left:18px;font-size:12px} ul.alt li{margin:3px 0}
   .mod{border:1px solid var(--line);border-left:5px solid #2f5597;border-radius:10px;padding:8px 12px;margin-top:10px;background:#f8f9fc}
   .mod span{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-top:4px}
   .mod span:first-child{margin-top:0}
@@ -488,7 +492,8 @@ function applyLogin(r, uid, pin){
       '• <b>Snacks distribution</b> figures for a day can be entered until <b>'+esc(r.rules.dailyCutoff)+(r.rules.dailyDays?' the next day':'')+'</b>. Older days are view only.<br>'+
       '• <b>Operations</b>: open or close days for next week before <b>'+esc(r.rules.planCutoff)+'</b> – the weekly plan follows straight away.<br>'+
       '• Student numbers change only after your Project Officer approves.<br>'+
-      '• Leftovers carry to the next working day unless given out as double portions.'+
+      '• Leftovers carry to the next working day unless given out as double portions.<br>'+
+      '• <b>Allergies</b> (counts per school) show on each school. For snacks, substitutes come in the warehouse order – check they arrive.'+
       (r.user.canOverride?'<br>• As '+esc(r.user.role)+' you can edit closed days. A reason is always recorded.':'');
     var opts=S.reasons.map(function(x){return '<option>'+esc(x)+'</option>';}).join('');
     $('pReason').innerHTML='<option value="">Select a reason</option>'+opts; $('dReason').innerHTML=$('pReason').innerHTML;
@@ -501,7 +506,7 @@ function applyLogin(r, uid, pin){
     $('tKitchen').classList.toggle('hidden', !hasK);
     kBadge();
     var kr = hasK ? '• <b>Kitchen sandwiches</b>: send the number needed by <b>'+esc(r.kRules.am)+'</b> (AM)'+(r.kRules.shifts.indexOf('PM')>=0?' and <b>'+esc(r.kRules.pm)+'</b> (PM)':'')+'. You can correct it until the kitchen confirms.<br>'+
-      '• After the kitchen confirms, the number distributed equals the number prepared. If sandwiches are left over, press <b>Leftover</b> next to the school and enter distributed and leftover – they should add up to the number prepared, otherwise it is flagged. Same day applies at once; after that the Project Officer approves.' : '';
+      '• After the kitchen confirms, prepared = the order and distributed = prepared. If sandwiches are left over, or the kitchen prepared a different number, press <b>Leftover</b> next to the school and enter prepared and leftover – distributed is worked out (prepared – leftover). If nothing is entered, the day counts as all distributed with no leftover. Same day applies at once; after that the Project Officer approves.' : '';
     if(!hasSnack) $('rules').innerHTML = kr + '<br>• <b>School info</b>: student numbers change only after your Project Officer approves.<br>• <b>Operations</b>: open or close school days for next week before <b>'+esc(r.rules.planCutoff)+'</b>.';
     else if(kr) $('rules').innerHTML += '<br>'+kr;
     $('lPin').value='';
@@ -549,6 +554,16 @@ function modBox(s){
   if(s.serves && s.serves.length) h+='<span>Supplies '+s.serves.length+' nearby school'+(s.serves.length>1?'s':'')+'</span><small dir="auto">'+s.serves.map(esc).join(' · ')+'</small>';
   return h+'</div>';
 }
+/* ---------- allergies and eating needs (counts per school, v7.8) ---------- */
+function algList(a){ return (a&&a.list||[]).map(function(x){ return esc(x.l)+' '+x.n; }).join(' · '); }
+function algBox(s, shifts, extra){
+  var h='';
+  (shifts||['AM']).forEach(function(sh){
+    var a=s.alg&&s.alg[sh]; if(!a||(!a.list.length&&!a.other)) return;
+    h+='<div>'+(shifts.length>1?'<b>'+sh+'</b>: ':'')+algList(a)+(a.other?(a.list.length?' · ':'')+esc(a.other):'')+'</div>';
+  });
+  return h?'<div class="algbox">⚠ <b>Allergies / eating needs (students)</b>'+h+(extra?'<div class="mini">'+extra+'</div>':'')+'</div>':'';
+}
 /* ---------- kitchen sandwiches ---------- */
 var K = { shift:'' };
 function kBadge(){
@@ -593,70 +608,112 @@ function renderKitchen(){
   $('kBody').innerHTML=r.kitchens.map(function(k){
     if(k.canConfirm && r.isToday) conf+=k.waiting;
     var anyConf=k.rows.some(function(x){return x.confirmed;});
-    var tO0=0,tD0=0; k.rows.forEach(function(x){ if(x.ordered!==null) tO0+=x.ordered; if(x.confirmed&&x.dist!==null) tD0+=x.dist; });
+    var tO0=0,tD0=0; k.rows.forEach(function(x){ if(x.ordered!==null) tO0+=kPrepOf(x); if(x.confirmed&&x.dist!==null) tD0+=x.dist; });
     var act = (k.canConfirm && r.isToday && k.waiting) || k.rows.some(function(x){return x.canDecide;});
     var fold = r.overview && r.kitchens.length>1;
     var h=(fold?'<details class="card kcard"'+(act?' open':'')+'><summary><b>'+esc(k.name)+'</b><br><span class="meta">'+
-        (k.confirmed?'✓ confirmed '+esc(k.confirmed.at):(k.waiting?k.waiting+' order(s) waiting':'no orders yet'))+' · ordered '+tO0+(k.confirmed?' · distributed '+tD0:'')+
+        (k.confirmed?'✓ confirmed '+esc(k.confirmed.at):(k.waiting?k.waiting+' order(s) waiting':'no orders yet'))+(k.confirmed?' · prepared '+tO0+' · distributed '+tD0:' · ordered '+tO0)+
         (k.rows.some(function(x){return x.pending;})?' · <span class="st y">change to approve</span>':'')+'</span></summary>':'<div class="card kcard">')+
       (fold?'':'<h3>'+esc(k.name)+'</h3>')+'<div class="meta">Kitchen'+(k.ks?' · supervisor '+esc(k.ks):'')+' · '+
       (k.confirmed?'<span class="st g">✓ Confirmed '+esc(k.confirmed.at)+' by '+esc(k.confirmed.by)+'</span>':'<span class="st y">Not confirmed yet</span>')+
       (k.menu?' <span class="st n">'+esc(k.menu)+'</span>':'')+'</div>';
+    h+='<div id="ka_'+k.id+'">'+kAltHtml(k)+'</div>';
     if(k.confirmed && k.waiting) h+='<div class="warn">'+k.waiting+' order'+(k.waiting>1?'s':'')+' came in after the kitchen confirmed'+(k.canConfirm?' – confirm again below.':'.')+'</div>';
     h+='<table class="ktab"><tr><th>School</th><th>'+(anyConf?'Prepared':'Ordered')+'</th>'+(anyConf?'<th>Distributed</th>':'')+'</tr>';
     var tO=0,tD=0,tL=0;
     k.rows.forEach(function(x){
       var sub=(x.type==='Kitchen'?'Kitchen school · ':'')+'enrolled '+x.students+(x.type!=='Kitchen'&&x.monitor&&x.monitor!==S.user.name?' · '+esc(x.monitor):'');
-      var oOver = x.ordered!==null && x.ordered>x.students, dOver = x.dist!==null && x.dist>x.students;
+      var pv = kPrepOf(x), oOver = x.ordered!==null && pv>x.students, dOver = x.dist!==null && x.dist>x.students;
       var oc = x.canOrder ? '<input type="number" inputmode="numeric" min="0" id="ko_'+x.id+'" data-st="'+x.students+'" class="'+(oOver?'over':x.late?'late':'')+'" value="'+(x.ordered===null?'':x.ordered)+'" placeholder="–" oninput="kOver(this)">'
-                          : (x.ordered===null?'–':(oOver?'<b class="overt">'+x.ordered+'</b>':x.ordered));
+                          : (x.ordered===null?'–':(oOver?'<b class="overt">'+pv+'</b>':pv)+(x.confirmed&&pv!==x.ordered?'<small class="lft">ordered '+x.ordered+'</small>':''));
       var dc='';
       if(anyConf){
         if(!x.confirmed) dc = x.ordered===null?'':'<span class="mini">waiting</span>';
         else { dc='<b'+(dOver?' class="overt"':'')+'>'+x.dist+'</b>'+(x.left!==null?'<small class="lft'+(x.flag?' bad':'')+'">+'+x.left+' left</small>':'');
           if(x.canDist) dc+='<button class="lbtn" id="kb_'+x.id+'" onclick="kLeft(\''+x.id+'\')">Leftover</button>'; }
       }
-      if(x.ordered!==null) tO+=x.ordered; if(x.confirmed&&x.dist!==null) tD+=x.dist; if(x.confirmed&&x.left) tL+=x.left;
-      h+='<tr class="'+(x.works&&x.ordered===null?'miss':'')+'"><td class="nm">'+esc(x.name)+'<small>'+sub+'</small><small>'+kChip(x)+'</small><small class="overmsg'+(oOver||dOver?'':' hidden')+'" id="kw_'+x.id+'">Above enrolment ('+x.students+')</small></td><td>'+oc+'</td>'+(anyConf?'<td>'+dc+'</td>':'')+'</tr>';
-      if(x.canDist) h+='<tr class="sub hidden" id="ks_'+x.id+'"><td colspan="3"><div class="lbox"><div class="lhd">Prepared <b>'+x.ordered+'</b> – enter what was distributed and what was left over.</div>'+
-        '<div class="lrow"><label>Distributed<input type="number" inputmode="numeric" min="0" id="kd_'+x.id+'" data-st="'+x.students+'" value="'+(x.left!==null?x.dist:'')+'" oninput="kLeftCheck(\''+x.id+'\')"></label>'+
-        '<label>Leftover<input type="number" inputmode="numeric" min="0" id="kl_'+x.id+'" value="'+(x.left!==null?x.left:'')+'" oninput="kLeftCheck(\''+x.id+'\')"></label></div>'+
+      if(x.ordered!==null) tO+=pv; if(x.confirmed&&x.dist!==null) tD+=x.dist; if(x.confirmed&&x.left) tL+=x.left;
+      h+='<tr class="'+(x.works&&x.ordered===null?'miss':'')+'"><td class="nm">'+esc(x.name)+'<small>'+sub+'</small><small>'+kChip(x)+'</small>'+(x.alg&&x.alg.list.length&&!x.onSnacks?'<small class="algs">⚠ '+algList(x.alg)+'</small>':'')+'<small class="overmsg'+(oOver||dOver?'':' hidden')+'" id="kw_'+x.id+'">Above enrolment ('+x.students+')</small></td><td>'+oc+'</td>'+(anyConf?'<td>'+dc+'</td>':'')+'</tr>';
+      if(x.canDist) h+='<tr class="sub hidden" id="ks_'+x.id+'"><td colspan="3"><div class="lbox"><div class="lhd">Ordered <b>'+x.ordered+'</b>. Enter the number actually prepared (change it only if the kitchen prepared a different number) and the leftover. Distributed = prepared – leftover.</div>'+
+        '<div class="lrow"><label>Prepared<input type="number" inputmode="numeric" min="0" id="kp_'+x.id+'" value="'+pv+'" oninput="kLeftCheck(\''+x.id+'\')"></label>'+
+        '<label>Leftover<input type="number" inputmode="numeric" min="0" id="kl_'+x.id+'" value="'+(x.left!==null?x.left:'')+'" placeholder="0" oninput="kLeftCheck(\''+x.id+'\')"></label></div>'+
         '<div class="lchk" id="kc_'+x.id+'"></div><input id="kn_'+x.id+'" placeholder="Note (optional)">'+
         '<div class="act"><button class="btn" onclick="kSaveLeft(\''+x.id+'\')">Save leftover</button><button class="btn sec" onclick="kLeft(\''+x.id+'\')">Cancel</button></div></div></td></tr>';
-      if(x.pending) h+='<tr class="sub"><td colspan="'+(anyConf?3:2)+'"><div class="req">Requested by '+esc(x.pending.by)+': <b>distributed '+x.pending.value+(x.pending.left!==null?' + leftover '+x.pending.left:'')+'</b> (prepared '+x.ordered+')'+(x.pending.reason?' · '+esc(x.pending.reason):'')+
+      if(x.pending) h+='<tr class="sub"><td colspan="'+(anyConf?3:2)+'"><div class="req">Requested by '+esc(x.pending.by)+': <b>'+(x.pending.prep!=null?'prepared '+x.pending.prep+' · ':'')+'distributed '+x.pending.value+(x.pending.left!==null?' · leftover '+x.pending.left:'')+'</b> (ordered '+x.ordered+')'+(x.pending.reason?' · '+esc(x.pending.reason):'')+
         (x.canDecide?'<div class="act"><button class="btn ok2" onclick="kDecide(\''+x.id+'\',\'Approved\')">Approve</button><button class="btn no" onclick="kDecide(\''+x.id+'\',\'Rejected\')">Reject</button></div>':' – waiting for approval.')+'</div></td></tr>';
     });
     h+='<tr class="tot"><td style="text-align:left">Total</td><td>'+tO.toLocaleString()+'</td>'+(anyConf?'<td>'+tD.toLocaleString()+(tL?'<small class="lft">+'+tL+' left</small>':'')+'</td>':'')+'</tr></table>';
     var canSend=k.rows.some(function(x){return x.canOrder && !(k.canConfirm && x.id===k.id);});
     if(canSend) h+='<button class="btn'+(k.canConfirm?' sec':'')+'" onclick="kSend(\''+k.id+'\')">Send to kitchen</button>';
     if(k.canConfirm && (!k.confirmed || k.waiting || k.rows.some(function(x){return x.canOrder;}))){
-      var mopt=r.menus.map(function(x){return '<option'+(x===k.menu?' selected':'')+'>'+esc(x)+'</option>';}).join('');
-      h+='<label for="km_'+k.id+'">Menu of the day</label><select id="km_'+k.id+'"><option value="">Choose the menu</option>'+mopt+'</select>'+
+      if(r.sand){ // v7.7: sandwich and fruit / vegetable chosen separately
+        var cur=String(k.menu||'').replace(/^Day \d+ – /,'').split(' + ');
+        var opt=function(list,sel){ return list.map(function(x){return '<option'+(x===sel?' selected':'')+'>'+esc(x)+'</option>';}).join(''); };
+        h+='<div class="row2"><div><label for="kms_'+k.id+'">Sandwich</label><select id="kms_'+k.id+'" onchange="kAltUpd(\''+k.id+'\')"><option value="">Choose</option>'+opt(r.sand,cur[0])+'</select></div>'+
+           '<div><label for="kmf_'+k.id+'">Fruit / vegetable</label><select id="kmf_'+k.id+'" onchange="kAltUpd(\''+k.id+'\')"><option value="">Choose</option>'+opt(r.fv,cur[1])+'</select></div></div>';
+      } else {
+        var mopt=r.menus.map(function(x){return '<option'+(x===k.menu?' selected':'')+'>'+esc(x)+'</option>';}).join('');
+        h+='<label for="km_'+k.id+'">Menu of the day</label><select id="km_'+k.id+'"><option value="">Choose the menu</option>'+mopt+'</select>';
+      }
+      h+=
          '<button class="btn" onclick="kConfirm(\''+k.id+'\')">'+(k.confirmed?'Confirm again':'Confirm order')+'</button>';
     }
     return h+(fold?'</details>':'</div>');
   }).join('');
   if(r.isToday && S.kb){ S.kb.confirm=conf; kBadge(); }
 }
-/* Leftover: open the box under the school, check that distributed + leftover = prepared */
+/* Allergies against the menu (v7.8): alternatives the kitchen should prepare, per school */
+function kMenuAlg(k){
+  var A=S.k.alg, s=$('kms_'+k.id), f=$('kmf_'+k.id);
+  if(A && s && f && (s.value||f.value)) return { sand: s.value?(A.sand[s.value]||[]):[], fv: f.value?(A.fv[f.value]||[]):[], name:(s.value||'…')+' + '+(f.value||'…') };
+  if(k.menuAlg) return { sand:k.menuAlg.sand, fv:k.menuAlg.fv, name:String(k.menu).replace(/^Day \d+ – /,'') };
+  return null;
+}
+function kAltHtml(k){
+  if(!S.k || !S.k.alg) return '';
+  var ma=kMenuAlg(k), L=S.k.alg.labels, rows=[], ts=0, tf=0;
+  var withAlg=k.rows.filter(function(x){ return !x.onSnacks && (x.works || x.ordered!==null) && x.alg && x.alg.list.length; });
+  if(!withAlg.length) return '';
+  if(!ma) return '<div class="algbox">⚠ '+withAlg.length+' school'+(withAlg.length>1?'s have':' has')+' students with allergies (shown under each school). Choose the menu to see the alternatives to prepare.</div>';
+  withAlg.forEach(function(x){
+    var c={}; x.alg.list.forEach(function(a){ c[a.k]=a.n; });
+    var sa=ma.sand.filter(function(a){return c[a];}), fa=ma.fv.filter(function(a){return c[a];});
+    var sn=sa.reduce(function(t,a){return t+c[a];},0), fn=fa.reduce(function(t,a){return t+c[a];},0);
+    var hard=/apple|carrot/i.test(ma.name)&&c.Chewing?c.Chewing:0;
+    if(!sn&&!fn&&!hard) return;
+    ts+=sn; tf+=fn;
+    var bits=[];
+    if(sn) bits.push('sandwich: '+(sa.length>1?'up to ':'')+sn+' ('+sa.map(function(a){return L[a]+' '+c[a];}).join(', ')+')');
+    if(fn) bits.push('fruit/veg: '+fn+' ('+fa.map(function(a){return L[a]+' '+c[a];}).join(', ')+')');
+    if(hard) bits.push(hard+' chewing/swallowing – cut it small or give a soft fruit');
+    rows.push('<li><b dir="auto">'+esc(x.name)+'</b> – '+bits.join(' · ')+'</li>');
+  });
+  if(!rows.length) return '<div class="algbox">✓ '+esc(ma.name)+': no allergy reported against this menu for these schools.</div>';
+  return '<div class="algbox">⚠ <b>Allergies – '+esc(ma.name)+'</b>: prepare about <b>'+ts+'</b> alternative sandwich'+(ts===1?'':'es')+' and <b>'+tf+'</b> alternative fruit/veg (included in the numbers ordered).<ul class="alt">'+rows.join('')+'</ul>'+
+    '<div class="mini">Counts per school from the allergy forms. "Up to" = a student can have more than one allergy.</div></div>';
+}
+function kAltUpd(kid){ var k=S.k.kitchens.filter(function(x){return x.id===kid;})[0]; if(k && $('ka_'+kid)) $('ka_'+kid).innerHTML=kAltHtml(k); }
+/* Leftover (v7.7): prepared + leftover; distributed = prepared – leftover */
 function kRow(id){ var f=null; S.k.kitchens.forEach(function(k){ k.rows.forEach(function(x){ if(x.id===id) f=x; }); }); return f; }
-function kLeft(id){ var sub=$('ks_'+id), open=sub.classList.contains('hidden'); sub.classList.toggle('hidden',!open); $('kb_'+id).classList.toggle('on',open); if(open){ kLeftCheck(id); $('kd_'+id).focus(); } }
+function kPrepOf(x){ return x.confirmed && x.prep!=null ? x.prep : x.ordered; }
+function kLeft(id){ var sub=$('ks_'+id), open=sub.classList.contains('hidden'); sub.classList.toggle('hidden',!open); $('kb_'+id).classList.toggle('on',open); if(open){ kLeftCheck(id); $('kl_'+id).focus(); } }
 function kLeftCheck(id){
-  var x=kRow(id), d=$('kd_'+id).value, l=$('kl_'+id).value, c=$('kc_'+id);
-  kOver($('kd_'+id));
-  if(d===''||l===''){ c.className='lchk'; c.textContent='Distributed + leftover should equal '+x.ordered+'.'; return; }
-  var t=+d + +l;
-  if(t===x.ordered){ c.className='lchk ok'; c.textContent='✓ '+d+' + '+l+' = '+t+' prepared'; }
-  else { c.className='lchk bad'; c.textContent='⚠ '+d+' + '+l+' = '+t+', but '+x.ordered+' were prepared ('+(t>x.ordered?'+':'')+(t-x.ordered)+'). It will be flagged.'; }
+  var x=kRow(id), p=$('kp_'+id).value, l=$('kl_'+id).value, c=$('kc_'+id), w=$('kw_'+id);
+  if(p===''){ c.className='lchk bad'; c.textContent='Enter the number prepared.'; return; }
+  var d=+p-(+l||0);
+  if(d<0){ c.className='lchk bad'; c.textContent='⚠ The leftover ('+l+') is more than the number prepared ('+p+').'; return; }
+  c.className='lchk good';
+  c.textContent='Distributed = '+p+' – '+(+l||0)+' = '+d+(+p!==x.ordered?' · prepared differs from the order ('+x.ordered+')':'');
+  if(w) w.classList.toggle('hidden', !(d>x.students));
 }
 function kSaveLeft(id){
   show($('kOk'),''); show($('kErr'),'');
-  var x=kRow(id), d=$('kd_'+id).value, l=$('kl_'+id).value;
-  if(d===''||l===''){ show($('kErr'),x.name+': enter both the number distributed and the leftover.'); window.scrollTo(0,0); return; }
-  if(+d + +l !== x.ordered && !confirm('Distributed + leftover = '+(+d + +l)+', but '+x.ordered+' were prepared. Save anyway? It will be flagged.')) return;
+  var x=kRow(id), p=$('kp_'+id).value, l=$('kl_'+id).value;
+  if(p===''){ show($('kErr'),x.name+': enter the number prepared.'); window.scrollTo(0,0); return; }
+  if((+l||0)>+p){ show($('kErr'),x.name+': the leftover is more than the number prepared.'); window.scrollTo(0,0); return; }
   busy(true);
-  call('apiKitchenDist',S.uid,S.pin,S.k.ds,S.k.shift,[{id:id, dist:d, left:l, note:$('kn_'+id).value}]).then(function(r){
-    kDone(r.pending ? 'Sent to your Project Officer for approval.' : r.flagged ? 'Saved – flagged: distributed + leftover does not equal the number prepared.' : 'Leftover saved.');
+  call('apiKitchenDist',S.uid,S.pin,S.k.ds,S.k.shift,[{id:id, prep:p, left:l, note:$('kn_'+id).value}]).then(function(r){
+    kDone(r.pending ? 'Sent to your Project Officer for approval.' : r.saved ? 'Saved.' : 'Nothing changed.');
   }).catch(kFail);
 }
 /* red when the number is above the school's enrolment for that shift */
@@ -681,15 +738,20 @@ function kSend(kid){
   call('apiKitchenOrder',S.uid,S.pin,S.k.ds,S.k.shift,e).then(function(r){ kDone('Sent to the kitchen'+(r.late?' (after the cut-off – marked late)':'')+'.'); }).catch(kFail);
 }
 function kConfirm(kid){
-  var menu=$('km_'+kid).value, own=$('ko_'+kid)?$('ko_'+kid).value:'';
+  var own=$('ko_'+kid)?$('ko_'+kid).value:'', menu;
   show($('kOk'),''); show($('kErr'),'');
+  if($('kms_'+kid)){
+    var sw=$('kms_'+kid).value, fv=$('kmf_'+kid).value;
+    if(!sw||!fv){ show($('kErr'),'Choose the sandwich and the fruit / vegetable of the day.'); return; }
+    menu=sw+' + '+fv;
+  } else menu=$('km_'+kid).value;
   if(!menu){ show($('kErr'),'Choose the menu of the day.'); return; }
   if($('ko_'+kid) && own===''){ show($('kErr'),'Enter the number of sandwiches for the kitchen school.'); return; }
   var others=kOrders(kid, kid);
   busy(true);
   (others.length ? call('apiKitchenOrder',S.uid,S.pin,S.k.ds,S.k.shift,others) : Promise.resolve())
     .then(function(){ return call('apiKitchenConfirm',S.uid,S.pin,kid,S.k.ds,S.k.shift,menu,own); })
-    .then(function(r){ kDone('Order confirmed ('+r.confirmed+' school'+(r.confirmed===1?'':'s')+'). The number distributed now equals the order.'); }).catch(kFail);
+    .then(function(r){ kDone('Order confirmed ('+r.confirmed+' school'+(r.confirmed===1?'':'s')+'). Prepared and distributed now equal the order – use Leftover if that changes.'); }).catch(kFail);
 }
 function kDecide(id, d){
   busy(true);
@@ -723,6 +785,7 @@ function renderPlan(){
   $('pMeta').textContent=s.village+' · '+s.area+' · Monitor: '+s.monitor;
   $('pChips').innerHTML='<span class="chip">AM students: <b>'+s.am+'</b></span>'+(hasPM?'<span class="chip">PM students: <b>'+s.pm+'</b></span>':'')+
     '<span class="chip">AM days: '+esc(s.amDays||'–')+'</span>'+(hasPM?'<span class="chip">PM days: '+esc(s.pmDays||'–')+'</span>':'');
+  $('pChips').innerHTML+=algBox(s, hasPM?['AM','PM']:['AM'], 'Substitutes for these students are added to the warehouse order.');
   $('pLeft').innerHTML='Leftover in the school store now: <b>AM '+r.leftover.AM+'</b>'+(hasPM?' · <b>PM '+r.leftover.PM+'</b>':'')+'. Take it into account when you plan.';
   var modes={}; r.days.forEach(function(d){ ['AM','PM'].forEach(function(sh){ if(d[sh].working||d[sh].qty!=null) modes[d[sh].mode]=d[sh].msg; }); });
   var b='';
@@ -843,6 +906,7 @@ function renderInfo(){
   $('iBody').classList.remove('hidden');
   $('iName').textContent=s.name; $('iMod').innerHTML=modBox(s); $('iMeta').textContent=s.village+' · '+s.area+' · Monitor: '+s.monitor+' · PO: '+(s.po||'–');
   $('iStudents').innerHTML='<div class="chips"><span class="chip">AM: <b>'+s.am+'</b></span>'+(r.shifts.indexOf('PM')>=0||s.pm?'<span class="chip">PM: <b>'+s.pm+'</b></span>':'')+'</div>';
+  $('iStudents').innerHTML+=algBox(s, hasPM?['AM','PM']:['AM'], 'Counts only. Updated by the PM / Project Officers in the Allergies tab.');
   $('iPending').innerHTML=r.pending.map(function(q){ return '<div class="req">Waiting for approval: <b>'+q.shift+' '+q.current+' → '+q.requested+'</b> · '+esc(q.reason)+' · '+esc(q.by)+'</div>'; }).join('');
   $('iShift').innerHTML=r.shifts.map(function(x){return '<option>'+x+'</option>';}).join('') || '<option>AM</option>';
   $('iReqBox').classList.add('hidden'); $('iReqBtn').classList.toggle('hidden',!r.canEdit); $('iNew').value='';
@@ -967,7 +1031,7 @@ function renderDaily(){
   $('dBody').classList.remove('hidden');
   $('dName').textContent=s.name;
   $('dMeta').textContent=r.label+' · '+s.village;
-  $('dChips').innerHTML='';
+  $('dChips').innerHTML=algBox(s, s.hasPM?['AM','PM']:['AM'], 'Give the substitute items to these students – they come in the delivery.');
   var anyEdit=false, mode='', openMsg='';
   var h='';
   ['AM','PM'].forEach(function(sh){
