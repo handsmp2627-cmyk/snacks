@@ -128,6 +128,17 @@
   .lchk{font-size:12px;margin:6px 0 2px;color:var(--muted)}.lchk.good{color:#2e7d32;font-weight:600}.lchk.bad{color:var(--redT);font-weight:700}
   .lbox .act{display:flex;gap:8px;margin-top:8px}.lbox .act .btn{margin:0;padding:10px}
   .algs{display:block;font-size:11px;color:#9a5b00;direction:ltr;text-align:right;font-weight:600}
+  .multi{color:#9c0006;font-weight:700}
+  .astu{border:1px solid #e3e3e3;border-radius:8px;padding:8px 10px;margin:6px 0;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .astu.m{border-color:#e6a0a0;background:#fdf1f1}
+  .astu .tag{font-size:11px;color:#7f7f7f}
+  .astu button{font-size:12px;padding:5px 10px;width:auto;flex:0 0 auto;margin:0}
+  .astu > div{flex:1 1 auto;text-align:left}
+  .astu.hid{display:none}
+  .amore{background:none;border:none;color:#2f5597;font-weight:600;padding:6px 0;cursor:pointer}
+  .achk{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin:4px 0 8px}
+  .achk label{font-weight:normal;margin:0;display:flex;align-items:center;justify-content:flex-start;text-align:left;gap:6px;font-size:13px}
+  .achk input{width:auto;margin:0;flex:0 0 auto}
   .algbox{background:#fff8ec;border:1px solid #f0d3a6;border-radius:9px;padding:8px 10px;margin-top:10px;font-size:13px;color:#5c3b00}
   .algbox b{color:#7a4a00}
   ul.alt{margin:6px 0 0;padding-left:18px;font-size:12px} ul.alt li{margin:3px 0}
@@ -169,8 +180,7 @@
 <!-- HOME -->
 <section id="v-home" class="hidden">
   <div class="tiles">
-    <button class="tile inf" onclick="go('info')" style="border-left-color:#548235"><b>School info <span id="tInfoBadge"></span></b><span>Students, recess time, contacts and working days. Request a change to student numbers.</span></button>
-    <button class="tile inf" id="tOpsTile" onclick="go('ops')" style="border-left-color:#bf8f00"><b>Operations</b><span id="tOps">Open or close school days for next week – this week only or permanently.</span></button>
+    <button class="tile inf" onclick="go('info')" style="border-left-color:#548235"><b>School info <span id="tInfoBadge"></span></b><span>Students, allergies, recess time, contacts and working days. Changes go to your Project Officer for approval.</span></button>
     <button class="tile hidden" id="tKitchen" onclick="go('kitchen')" style="border-left-color:#c55a11"><b>Kitchen sandwiches <span id="tKBadge"></span></b><span id="tKText">Sandwiches needed per school, kitchen confirmation and the number distributed.</span></button>
     <button class="tile snk" onclick="go('plan')"><b>Weekly snack plan</b><span id="tPlan">Forecast per school, day and shift.</span></button>
     <button class="tile snk" onclick="go('daily')"><b>Snacks distribution</b><span id="tDaily">Received, distributed and leftovers – every day.</span></button>
@@ -229,7 +239,50 @@
       <button class="btn sec hidden" id="iPmBtn" onclick="$('iPmBox').classList.remove('hidden');this.classList.add('hidden')">Add a PM shift</button>
       <div class="sec">Working days</div>
       <div id="iDays"></div>
-      <div class="info">To open or close days for a week, use <b>Operations</b>.</div>
+      <div class="info" id="iDaysNote">Working days are changed by the area monitor in this screen, with the Project Officer's approval.</div>
+    </div>
+    <div class="card hidden" id="oCard">
+      <h2>Working days – this week or permanent</h2>
+      <label for="oWeek">Week (Monday – Sunday)</label>
+      <select id="oWeek" onchange="loadOps()"></select>
+      <div id="oBody" class="hidden">
+        <div id="oShifts"></div>
+        <div class="sec">Is this change permanent?</div>
+        <div class="radio">
+          <label><input type="radio" name="oType" value="This week only" checked> This week only</label>
+          <label><input type="radio" name="oType" value="Permanent"> Permanent</label>
+        </div>
+        <label for="oReason">Reason (required)</label>
+        <select id="oReason"></select>
+        <label for="oNote">Details</label>
+        <input id="oNote" placeholder="e.g. school closed for municipal elections">
+        <button class="btn" id="oSave" onclick="saveOps()">Save school days</button>
+        <div class="err" id="oErr"></div>
+        <div class="ok" id="oOk"></div>
+        <div class="next hidden" id="oNext"><button class="btn sec" onclick="opsToPlan()">Update the weekly plan for this school →</button></div>
+      </div>
+    </div>
+    <div class="card" id="aCard">
+      <h2>Students with allergies / eating needs</h2>
+      <div class="meta">One line per student – grade and allergies only, no names. ⚠ = 2 or more allergies: take extra care with the substitute.</div>
+      <div id="aList"></div>
+      <div id="aAddBox" class="hidden">
+        <div class="sec">Add a student</div>
+        <div class="row2">
+          <div><label for="aShift">Shift</label><select id="aShift"></select></div>
+          <div><label for="aGrade">Grade</label><select id="aGrade"></select></div>
+        </div>
+        <label>Allergies / eating needs (tick all that apply)</label>
+        <div class="achk" id="aChecks"></div>
+        <label for="aNote">Details (optional, no names)</label>
+        <input id="aNote" placeholder="e.g. can eat cheese, not liquid milk">
+        <label for="aReason">Reason (required)</label>
+        <select id="aReason"></select>
+        <button class="btn" onclick="sendAlgAdd()">Send for approval</button>
+      </div>
+      <button class="btn sec hidden" id="aAddBtn" onclick="$('aAddBox').classList.remove('hidden');this.classList.add('hidden')">Add a student with an allergy</button>
+      <div class="err" id="aErr"></div>
+      <div class="ok" id="aOk"></div>
     </div>
     <div class="card">
       <h2>Recess, delivery and contacts</h2>
@@ -243,37 +296,6 @@
 </section>
 
 <!-- OPERATIONS -->
-<section id="v-ops" class="hidden">
-  <div class="card">
-    <h2>Operations – school days</h2>
-    <label for="oWeek">Week (Monday – Sunday)</label>
-    <select id="oWeek" onchange="loadOps()"></select>
-    <label for="oSchool">School</label>
-    <select id="oSchool" onchange="loadOps()"></select>
-  </div>
-  <div id="oBody" class="hidden">
-    <div class="card">
-      <div class="school" id="oName"></div>
-      <div class="meta" id="oMeta"></div>
-      <div id="oMod"></div>
-      <div id="oShifts"></div>
-      <div class="sec">Is this change permanent?</div>
-      <div class="radio">
-        <label><input type="radio" name="oType" value="This week only" checked> This week only</label>
-        <label><input type="radio" name="oType" value="Permanent"> Permanent</label>
-      </div>
-      <label for="oReason">Reason (required)</label>
-      <select id="oReason"></select>
-      <label for="oNote">Details</label>
-      <input id="oNote" placeholder="e.g. school closed for municipal elections">
-      <button class="btn" id="oSave" onclick="saveOps()">Save school days</button>
-      <div class="err" id="oErr"></div>
-      <div class="ok" id="oOk"></div>
-      <div class="next hidden" id="oNext"><button class="btn sec" onclick="opsToPlan()">Update the weekly plan for this school →</button></div>
-    </div>
-  </div>
-</section>
-
 <!-- PLAN -->
 <section id="v-plan" class="hidden">
   <div class="card">
@@ -368,7 +390,7 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbyzRf6yjLSRwU1wY_KvcIIGY4
 var S = { user:null, uid:'', pin:'', schools:[], reasons:[], plan:null, daily:null, now:null };
 function $(id){ return document.getElementById(id); }
 /* Calls that are safe to repeat automatically if Google returns an error page (busy server). */
-var NO_RETRY = { apiDecide:1, apiRequestStudents:1, apiRequestChange:1 };
+var NO_RETRY = { apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1 };
 var DEBUG = /[?&]debug=1/.test(location.search);
 function dbg(fn, srv, tot){ var d=$('dbg'); if(!d){ d=document.createElement('div'); d.id='dbg'; d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#111;color:#0f0;font:11px monospace;padding:4px 8px;z-index:40;max-height:30vh;overflow:auto'; document.body.appendChild(d); }
   d.innerHTML='<div>'+fn+': server '+(srv/1000).toFixed(2)+' s · total '+(tot/1000).toFixed(2)+' s · Google/network '+((tot-srv)/1000).toFixed(2)+' s</div>'+d.innerHTML; }
@@ -505,14 +527,13 @@ function applyLogin(r, uid, pin){
       '• <b>Weekly plan</b> for next week closes <b>'+esc(r.rules.planCutoff)+'</b>.<br>'+
       '• After that, only <b>'+esc(r.rules.pickup2)+'</b> can still change, on <b>'+esc(r.rules.midWeek)+'</b>, with a reason.<br>'+
       '• <b>Snacks distribution</b> figures for a day can be entered until <b>'+esc(r.rules.dailyCutoff)+(r.rules.dailyDays?' the next day':'')+'</b>. Older days are view only.<br>'+
-      '• <b>Operations</b>: open or close days for next week before <b>'+esc(r.rules.planCutoff)+'</b> – the weekly plan follows straight away.<br>'+
-      '• Student numbers change only after your Project Officer approves. So do <b>PM</b> changes: PM recess, PM working days and adding a PM shift (School info / Operations).<br>'+
+      '• <b>School info</b>: working days (this week or permanent), students with allergies, student numbers and PM changes go to your Project Officer for approval. Ask before <b>'+esc(r.rules.planCutoff)+'</b> for next week.<br>'+
       '• Leftovers carry to the next working day unless given out as double portions.<br>'+
       '• <b>Allergies</b> (counts per school) show on each school. For snacks, substitutes come in the warehouse order – check they arrive.'+
       (r.user.canOverride?'<br>• As '+esc(r.user.role)+' you can edit closed days. A reason is always recorded.':'');
     var opts=S.reasons.map(function(x){return '<option>'+esc(x)+'</option>';}).join('');
     $('pReason').innerHTML='<option value="">Select a reason</option>'+opts; $('dReason').innerHTML=$('pReason').innerHTML;
-    $('iReason').innerHTML=$('pReason').innerHTML; $('oReason').innerHTML=$('pReason').innerHTML;
+    $('iReason').innerHTML=$('pReason').innerHTML; $('oReason').innerHTML=$('pReason').innerHTML; $('aReason').innerHTML=$('pReason').innerHTML;
     $('tInfoBadge').innerHTML = r.pending ? '<span class="badge2">'+r.pending+' to approve</span>' : '';
     S.kb = r.kitchen || {count:0}; S.kRules = r.kRules;
     var hasSnack = S.schools.length>0, hasK = S.kb.count>0, hasInfo = S.infoSchools.length>0;
@@ -522,25 +543,24 @@ function applyLogin(r, uid, pin){
     kBadge();
     var kr = hasK ? '• <b>Kitchen sandwiches</b>: send the number needed by <b>'+esc(r.kRules.am)+'</b> (AM)'+(r.kRules.shifts.indexOf('PM')>=0?' and <b>'+esc(r.kRules.pm)+'</b> (PM)':'')+'. You can correct it until the kitchen confirms.<br>'+
       '• After the kitchen confirms, prepared = the order and distributed = prepared. If sandwiches are left over, or the kitchen prepared a different number, press <b>Leftover</b> next to the school and enter prepared and leftover – distributed is worked out (prepared – leftover). If nothing is entered, the day counts as all distributed with no leftover. Same day applies at once; after that the Project Officer approves.' : '';
-    if(!hasSnack) $('rules').innerHTML = kr + '<br>• <b>School info</b>: student numbers, PM recess, PM working days and a new PM shift change only after your Project Officer approves.<br>• <b>Operations</b>: open or close school days for next week before <b>'+esc(r.rules.planCutoff)+'</b>.';
+    if(!hasSnack) $('rules').innerHTML = kr + '<br>• <b>School info</b>: working days, students with allergies, student numbers and PM changes go to your Project Officer for approval.';
     else if(kr) $('rules').innerHTML += '<br>'+kr;
     $('lPin').value='';
     if(!r.user.canEnter){ $('pSave').classList.add('hidden'); }
-    if(r.user.infoOnly){ // MEAL: School info only, view only
+    if(r.user.infoOnly){ // MEAL and Viewer: School info only, view only
       Array.prototype.forEach.call(document.querySelectorAll('.tile.snk'), function(t){ t.classList.add('hidden'); });
-      $('tKitchen').classList.add('hidden'); $('tOpsTile').classList.add('hidden'); $('tInfoBadge').innerHTML='';
-      var ti=document.querySelector('.tile.inf > span'); if(ti) ti.textContent='Students, recess time, contacts and working days – view only.';
-      $('rules').innerHTML='• <b>School info</b>: view only – students, recess times, contacts and working days for every school.';
+      $('tKitchen').classList.add('hidden'); $('tInfoBadge').innerHTML='';
+      var ti=document.querySelector('.tile.inf > span'); if(ti) ti.textContent='Students, allergies, recess time, contacts and working days – view only.';
+      $('rules').innerHTML='• <b>School info</b>: view only – students, allergies, recess times, contacts and working days for every school.';
     }
 }
 function signOut(){ if(S.uid) store('snl|'+S.uid,null); S.user=null; S.pin=''; store('snk_pin',null); go('login'); }
 function go(v){
-  ['login','home','info','ops','plan','daily','kitchen'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
+  ['login','home','info','plan','daily','kitchen'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
   $('btnBack').classList.toggle('hidden', v==='login'||v==='home');
   $('btnOut').classList.toggle('hidden', v==='login');
   if(v==='login') $('hsub').textContent='HAND';
   if(v==='info') initInfo();
-  if(v==='ops') initOps();
   if(v==='plan') initPlan();
   if(v==='daily') initDaily();
   if(v==='kitchen') initKitchen();
@@ -575,7 +595,8 @@ function algBox(s, shifts, extra){
   var h='';
   (shifts||['AM']).forEach(function(sh){
     var a=s.alg&&s.alg[sh]; if(!a||(!a.list.length&&!a.other)) return;
-    h+='<div>'+(shifts.length>1?'<b>'+sh+'</b>: ':'')+algList(a)+(a.other?(a.list.length?' · ':'')+esc(a.other):'')+'</div>';
+    h+='<div>'+(shifts.length>1?'<b>'+sh+'</b>: ':'')+algList(a)+(a.other?(a.list.length?' · ':'')+esc(a.other):'')+'</div>'+
+      (a.multi?'<div class="multi">⚠ '+a.multi+' student'+(a.multi>1?'s':'')+' with 2 or more allergies – check each substitute is safe for them</div>':'');
   });
   return h?'<div class="algbox">⚠ <b>Allergies / eating needs (students)</b>'+h+(extra?'<div class="mini">'+extra+'</div>':'')+'</div>':'';
 }
@@ -648,7 +669,7 @@ function renderKitchen(){
           if(x.canDist) dc+='<button class="lbtn" id="kb_'+x.id+'" onclick="kLeft(\''+x.id+'\')">Leftover</button>'; }
       }
       if(x.ordered!==null) tO+=pv; if(x.confirmed&&x.dist!==null) tD+=x.dist; if(x.confirmed&&x.left) tL+=x.left;
-      h+='<tr class="'+(x.works&&x.ordered===null?'miss':'')+'"><td class="nm">'+esc(x.name)+'<small>'+sub+'</small><small>'+kChip(x)+'</small>'+(x.alg&&x.alg.list.length&&!x.onSnacks?'<small class="algs">⚠ '+algList(x.alg)+'</small>':'')+'<small class="overmsg'+(oOver||dOver?'':' hidden')+'" id="kw_'+x.id+'">Above enrolment ('+x.students+')</small></td><td>'+oc+'</td>'+(anyConf?'<td>'+dc+'</td>':'')+'</tr>';
+      h+='<tr class="'+(x.works&&x.ordered===null?'miss':'')+'"><td class="nm">'+esc(x.name)+'<small>'+sub+'</small><small>'+kChip(x)+'</small>'+(x.alg&&x.alg.list.length&&!x.onSnacks?'<small class="algs">⚠ '+algList(x.alg)+(x.alg.multi?' · <span class="multi">'+x.alg.multi+' with 2+ allergies</span>':'')+'</small>':'')+'<small class="overmsg'+(oOver||dOver?'':' hidden')+'" id="kw_'+x.id+'">Above enrolment ('+x.students+')</small></td><td>'+oc+'</td>'+(anyConf?'<td>'+dc+'</td>':'')+'</tr>';
       if(x.canDist) h+='<tr class="sub hidden" id="ks_'+x.id+'"><td colspan="3"><div class="lbox"><div class="lhd">Ordered <b>'+x.ordered+'</b>. Enter the number actually prepared (change it only if the kitchen prepared a different number) and the leftover. Distributed = prepared – leftover.</div>'+
         '<div class="lrow"><label>Prepared<input type="number" inputmode="numeric" min="0" id="kp_'+x.id+'" value="'+pv+'" oninput="kLeftCheck(\''+x.id+'\')"></label>'+
         '<label>Leftover<input type="number" inputmode="numeric" min="0" id="kl_'+x.id+'" value="'+(x.left!==null?x.left:'')+'" placeholder="0" oninput="kLeftCheck(\''+x.id+'\')"></label></div>'+
@@ -889,6 +910,11 @@ var FIELDS=[['sec','Recess and delivery'],['recAM','AM recess (start)','time'],[
   ['sec','Other contacts and storage'],['dtt','DTT focal point'],['dttph','DTT phone','tel'],['cp','CP focal point'],['cpph','CP phone','tel'],['storage','Storage room available'],['remarks','Remarks','area']];
 function initInfo(){
   schoolOpts($('iSchool'),null,'i');
+  var W=S.weeks||[];
+  $('oWeek').innerHTML=W.map(function(w){return '<option value="'+w.value+'">'+esc(w.label)+'</option>';}).join('');
+  var nxt=W.filter(function(w){return w.label.indexOf('Next week')===0;})[0];
+  if(W.length) $('oWeek').value = nxt ? nxt.value : W[0].value;
+  $('oCard').classList.add('hidden');
   $('iBody').classList.add('hidden');
   loadApprovals();
 }
@@ -911,7 +937,7 @@ function decide(id,dec){
     .catch(function(e){ busy(false); alert(e); });
 }
 function loadInfo(keep){
-  var sid=$('iSchool').value; show($('iErr'),''); if(keep!==true) show($('iOk'),'');
+  var sid=$('iSchool').value; show($('iErr'),''); if(keep!==true){ show($('iOk'),''); show($('aOk'),''); show($('oOk'),''); S.ops=null; }
   if(!sid){ $('iBody').classList.add('hidden'); return; }
   swr('info', $('iBody'), 'apiGetInfo', [S.uid,S.pin,sid], function(r){ S.info=r; renderInfo(); }, function(e){ if($('iBody').classList.contains('hidden')) alert(e); else show($('iErr'),e); });
 }
@@ -943,6 +969,56 @@ function renderInfo(){
     else h+='<label>'+f[1]+(f[0]==='recPM'&&pmAsk?' – sent to your Project Officer for approval':'')+(f[2]==='tel'&&v?' · '+telLink(v):'')+'</label><input data-k="'+f[0]+'" value="'+esc(v)+'"'+(f[2]==='time'?' type="time"':f[2]==='tel'?' type="tel" inputmode="tel"':'')+dis+'>';
   });
   $('iFields').innerHTML=h; $('iSave').classList.toggle('hidden',!r.canEdit);
+  $('iDaysNote').classList.toggle('hidden',!r.canOps);
+  $('oCard').classList.toggle('hidden',!r.canOps);
+  if(r.canOps && (!S.ops || S.ops.school.id!==s.id)) loadOps();
+  renderAlg();
+}
+/* ---------- students with allergies (v8.7) ---------- */
+function renderAlg(){
+  var r=S.info, h='';
+  show($('aErr'),'');
+  if(!r.algFull){ $('aList').innerHTML='<div class="info">The list of students is not loaded yet – counts only (see above).</div>'; $('aAddBtn').classList.add('hidden'); $('aAddBox').classList.add('hidden'); return; }
+  var L=r.algStudents||[];
+  ['AM','PM'].forEach(function(sh){
+    var l=L.filter(function(e){return e.shift===sh;}).sort(function(a,b){ return (b.multi?1:0)-(a.multi?1:0) || (a.status==='Active'?1:0)-(b.status==='Active'?1:0); }); if(!l.length) return;
+    if(L.some(function(e){return e.shift!==sh;})) h+='<div class="sec">'+sh+'</div>';
+    l.forEach(function(e, i){
+      var hid = i>=8 && !e.multi && e.status==='Active';
+      var st = e.status==='Active' ? '' : '<span class="badge">'+esc(e.status==='Pending add'?'waiting for approval':e.status==='Pending removal'?'removal waiting for approval':e.status)+'</span> ';
+      h+='<div class="astu'+(e.multi?' m':'')+(hid?' hid':'')+'"><div>'+(e.multi?'<span class="multi">⚠ </span>':'')+'<b>'+esc(e.grade||'Grade ?')+'</b> · '+e.alg.map(function(a){return esc(a.l);}).join(' + ')+
+        (e.note?'<div class="tag">'+esc(e.note)+'</div>':'')+(st?'<div>'+st+'</div>':'')+'</div>'+
+        (r.canEdit && e.status==='Active' ? '<button class="btn sec" onclick="algRemove(\''+e.id+'\')">Remove</button>' : '')+'</div>';
+    });
+  });
+  var nHid=(h.match(/ hid"/g)||[]).length;
+  if(nHid) h+='<button class="amore" onclick="Array.prototype.forEach.call(document.querySelectorAll(\'#aList .astu.hid\'),function(x){x.classList.remove(\'hid\');});this.remove()">Show all '+L.length+' students ▾</button>';
+  $('aList').innerHTML = h || '<div class="meta">No students with allergies recorded.</div>';
+  $('aAddBtn').classList.toggle('hidden',!r.canEdit); $('aAddBox').classList.add('hidden');
+  $('aShift').innerHTML=r.shifts.map(function(x){return '<option>'+x+'</option>';}).join('');
+  $('aGrade').innerHTML='<option value="">Select</option>'+r.grades.map(function(g){return '<option>'+esc(g)+'</option>';}).join('');
+  $('aChecks').innerHTML=r.algKeys.map(function(a){return '<label><input type="checkbox" value="'+esc(a.k)+'"> '+esc(a.l)+'</label>';}).join('');
+  $('aNote').value='';
+}
+function sendAlgAdd(){
+  var alg=Array.prototype.filter.call($('aChecks').querySelectorAll('input'),function(x){return x.checked;}).map(function(x){return x.value;});
+  var g=$('aGrade').value, rs=$('aReason').value;
+  if(!g){ alert('Select the grade.'); return; }
+  if(!alg.length){ alert('Tick at least one allergy or eating need.'); return; }
+  if(!rs){ alert('Select a reason.'); return; }
+  busy(true);
+  call('apiAllergyAdd',S.uid,S.pin,S.info.school.id,{shift:$('aShift').value,grade:g,alg:alg,note:$('aNote').value.trim()},rs).then(function(x){
+    busy(false); var msg = x.status==='Approved' ? 'Student added.' : 'Sent to your Project Officer for approval ('+x.id+').';
+    store(cKey('apiGetInfo',[S.uid,S.pin,$('iSchool').value]),null); loadInfo(true); loadApprovals(); show($('aOk'),msg);
+  }).catch(function(e){ busy(false); show($('aErr'),e); });
+}
+function algRemove(id){
+  var rs=prompt('Reason for removing this student (e.g. left the school, wrong entry):'); if(!rs) return;
+  busy(true);
+  call('apiAllergyRemove',S.uid,S.pin,S.info.school.id,id,rs).then(function(x){
+    busy(false); var msg = x.status==='Approved' ? 'Student removed.' : 'Removal sent to your Project Officer for approval ('+x.id+').';
+    store(cKey('apiGetInfo',[S.uid,S.pin,$('iSchool').value]),null); loadInfo(true); loadApprovals(); show($('aOk'),msg);
+  }).catch(function(e){ busy(false); show($('aErr'),e); });
 }
 function sendRequest(){
   var v=$('iNew').value, rs=$('iReason').value;
@@ -977,28 +1053,20 @@ function saveInfo(){
   }).catch(function(e){ busy(false); show($('iErr'),e); });
 }
 
-/* ---------- operations ---------- */
-function initOps(){
-  $('oWeek').innerHTML=S.weeks.map(function(w){return '<option value="'+w.value+'">'+esc(w.label)+'</option>';}).join('');
-  var nxt=S.weeks.filter(function(w){return w.label.indexOf('Next week')===0;})[0];
-  $('oWeek').value = nxt ? nxt.value : S.weeks[0].value;
-  schoolOpts($('oSchool'),null,'o');
-  $('oBody').classList.add('hidden');
-}
+/* ---------- working days (inside School info since v8.7) ---------- */
 function loadOps(){
-  var sid=$('oSchool').value; show($('oErr'),''); show($('oOk'),''); $('oNext').classList.add('hidden');
-  if(!sid){ $('oBody').classList.add('hidden'); return; }
+  var sid=$('iSchool').value; show($('oErr'),''); $('oNext').classList.add('hidden');
+  if(!sid || !S.info || !S.info.canOps){ $('oBody').classList.add('hidden'); return; }
   swr('ops', $('oBody'), 'apiGetOps', [S.uid,S.pin,sid,$('oWeek').value], function(r){ S.ops=r; renderOps(); },
     function(e){ show($('oErr'),e); $('oBody').classList.remove('hidden'); });
 }
 function renderOps(){
   var r=S.ops; $('oBody').classList.remove('hidden');
-  $('oName').textContent=r.school.name; $('oMod').innerHTML=modBox(r.school); $('oMeta').textContent=r.school.village+' · week '+r.weekLabel;
   var h='', any=false;
   Object.keys(r.shifts).forEach(function(sh){
     var x=r.shifts[sh];
     h+='<div class="sec">'+sh+' shift'+(x.changedThisWeek?' <span class="badge">changed for this week</span>':'')+'</div>'+
-      (x.pending?'<div class="req">'+esc(x.pending)+'</div>':'')+(x.approval?'<div class="meta">PM changes are applied once your Project Officer approves.</div>':'')+'<div class="daychips">';
+      (x.pending?'<div class="req">'+esc(x.pending)+'</div>':'')+(x.approval?'<div class="meta">Changes apply once your Project Officer approves.</div>':'')+'<div class="daychips">';
     x.days.forEach(function(d,i){
       var lock=!d.editable; if(!lock) any=true;
       h+='<div class="dchip'+(d.open?' on':'')+(lock?' lock':'')+'" data-sh="'+sh+'" data-i="'+i+'" title="'+esc(d.msg)+'" onclick="toggleDay(this)">'+esc(d.label.split(' ')[0])+'<small>'+esc(d.label.split(' ').slice(1).join(' '))+'</small></div>';
@@ -1006,7 +1074,7 @@ function renderOps(){
     h+='</div><div class="meta" style="margin-top:6px">Usual days: '+x.days.filter(function(d){return d.usual;}).map(function(d){return d.label.split(' ')[0];}).join(' ')+'. Tap a day to open or close it. Locked days are past the cut-off.</div>';
   });
   if(!Object.keys(r.shifts).length) h='<div class="info">No active shift at this school.</div>';
-  else if(!r.shifts.PM) h+='<div class="meta" style="margin-top:6px">No PM shift. To add one, use <b>School info → Add a PM shift</b>.</div>';
+  else if(!r.shifts.PM) h+='<div class="meta" style="margin-top:6px">No PM shift. To add one, use <b>Add a PM shift</b> above.</div>';
   $('oShifts').innerHTML=h; $('oSave').disabled=!any;
 }
 function toggleDay(el){
@@ -1033,7 +1101,7 @@ function saveOps(){
     if(x.removed.length) msg+=' Closed: '+x.removed.join(', ')+'.';
     if(x.added.length) msg+=' Opened: '+x.added.join(', ')+' – add the snacks for these days in the weekly plan.';
     if(x.zeroed) msg+=' '+x.zeroed+' planned day(s) set to 0.';
-    if(x.pending&&x.pending.length) msg+=' PM change sent to your Project Officer for approval ('+x.pending.join(', ')+').';
+    if(x.pending&&x.pending.length) msg=(x.added.length||x.removed.length?msg+' ':'')+'Sent to your Project Officer for approval ('+x.pending.join(', ')+'). The days change once approved.';
     show($('oOk'),msg); $('oNext').classList.toggle('hidden',!x.added.length);
     call('apiGetOps',S.uid,S.pin,S.ops.school.id,S.ops.week).then(function(r){ cPut(cKey('apiGetOps',[S.uid,S.pin,S.ops.school.id,S.ops.week]),r); S.ops=r; renderOps(); show($('oOk'),msg); $('oNext').classList.toggle('hidden',!x.added.length); });
   }).catch(function(e){ busy(false); show($('oErr'),e); });
