@@ -167,6 +167,109 @@
   .hprog tr.cur td{background:#eef2f9;font-weight:700}.hprog tr{cursor:pointer}
   .addsec{border:1px dashed var(--navy2);background:#fff;color:var(--navy2);border-radius:10px;padding:10px;width:100%;font:600 14px inherit;margin-top:10px;cursor:pointer}
   @media (max-width:420px){ .cell input{min-width:58px} .grid td.day small{max-width:110px} }
+  /* ---------- searchable school list (v9.0) ---------- */
+  select.pksel{display:none}
+  .pkbtn{width:100%;text-align:left;font:inherit;padding:11px 36px 11px 12px;border:1px solid #c9cfda;border-radius:9px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7385' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E") no-repeat right 12px center;color:var(--text);cursor:pointer;min-height:44px}
+  .pkbtn:disabled{background-color:#f2f3f6;color:#555}
+  .pkbtn .pkph{color:var(--muted)}
+  .pkbtn .pkv{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+  .pkbtn .pks{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--muted)}
+  .pk{position:fixed;inset:0;background:rgba(20,28,45,.45);z-index:50;display:flex;align-items:flex-start;justify-content:center}
+  .pkp{background:#fff;width:100%;max-width:560px;height:100%;display:flex;flex-direction:column}
+  @media (min-width:640px){ .pk{padding-top:6vh} .pkp{height:auto;max-height:82vh;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.25)} }
+  .pkh{display:flex;gap:8px;padding:12px;border-bottom:1px solid var(--line);align-items:center}
+  .pkh input{flex:1;font-size:16px;padding:11px 12px}
+  .pkh button{border:0;background:none;color:var(--navy2);font:600 14px inherit;padding:8px;cursor:pointer;white-space:nowrap}
+  .pkc{font-size:12px;color:var(--muted);padding:6px 14px}
+  .pkl{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;padding:0 6px 10px}
+  .pki{display:block;width:100%;text-align:left;border:0;background:none;font:inherit;padding:10px 10px;border-radius:9px;cursor:pointer;color:var(--text)}
+  .pki:hover,.pki.hl{background:#eef2f9}
+  .pki.cur{background:#e3eaf7}
+  .pki b{display:block;font-size:15px;direction:auto}
+  .pki small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+  .pki.all b{color:var(--navy2)}
+  .pkn{padding:24px 14px;color:var(--muted);text-align:center}
+  /* ---------- dashboard (v9.0) ---------- */
+  .db{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--grid:#e6e9ef;--good:#0ca30c;--warnc:#fab219;--crit:#d03b3b}
+  .db .seg{margin-top:0}
+  .db .seg + .seg{margin-top:8px}
+  .dfil .row2{margin-top:2px}
+  #dbWhenW{grid-column:1 / -1}
+  @media (min-width:600px){ .dfil .row2{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))} #dbWhenW{grid-column:auto} }
+  .kpis .kpi.hero ~ .kpi:last-child:nth-child(even){grid-column:span 2}
+  @media (min-width:600px){ .kpis .kpi.hero ~ .kpi:last-child:nth-child(even){grid-column:auto} }
+  .dbhd{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+  .dbhd h2{margin:0;font-size:17px}
+  .dbhd .meta{margin-top:3px}
+  .dbact{display:flex;gap:6px;flex:0 0 auto}
+  .dbact button{border:1px solid #c9cfda;background:#fff;color:var(--navy);border-radius:8px;padding:6px 10px;font:600 12px inherit;cursor:pointer}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (min-width:600px){ .kpis{grid-template-columns:repeat(4,1fr)} }
+  .kpi{background:#f6f8fb;border-radius:10px;padding:10px 12px;min-width:0}
+  .kpi .kl{font-size:12px;color:var(--muted)}
+  .kpi .kv{font-size:22px;font-weight:650;margin-top:2px;color:var(--text);white-space:nowrap}
+  .kpi .ks{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.3}
+  .kpi.hero{grid-column:span 2;background:#eef3fb}
+  .kpi.hero .kv{font-size:44px;line-height:1.05}
+  .stt{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;border-radius:10px;padding:1px 7px;margin-left:4px;vertical-align:3px;color:var(--text)}
+  .stt i{font-style:normal;display:inline-block;width:14px;height:14px;border-radius:50%;color:#fff;font-size:10px;line-height:14px;text-align:center}
+  .stt.g{background:#e5f4e5}.stt.g i{background:var(--good)}
+  .stt.w{background:#fff3d6}.stt.w i{background:var(--warnc);color:#3d2a00}
+  .stt.c{background:#fbe3e3}.stt.c i{background:var(--crit)}
+  .chart{position:relative;margin-top:6px}
+  .chart svg{display:block;width:100%;overflow:visible}
+  .chart text{font-size:11px;fill:#6b7385;font-variant-numeric:tabular-nums}
+  .lgd{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:4px}
+  .lgd span{display:inline-flex;align-items:center;gap:6px}
+  .lgd i{display:inline-block;width:12px;height:12px;border-radius:3px}
+  .lgd i.ln{height:2px;border-radius:1px;width:16px}
+  .dtip{position:fixed;z-index:60;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);padding:8px 10px;font-size:12px;pointer-events:none;min-width:130px}
+  .dtip .th{color:var(--muted);margin-bottom:4px}
+  .dtip .tr{display:flex;align-items:center;gap:6px;margin-top:2px}
+  .dtip .tr b{font-size:14px;font-variant-numeric:tabular-nums}
+  .dtip .tr i{display:inline-block;width:12px;height:2px;border-radius:1px}
+  .hb{display:grid;grid-template-columns:minmax(90px,38%) 1fr auto;gap:6px 8px;align-items:center;margin-top:8px;font-size:13px}
+  .hb .hl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:auto;text-align:left}
+  .hb .ht{height:12px;background:#eef1f6;border-radius:0 4px 4px 0;position:relative}
+  .hb .ht b{position:absolute;left:0;top:0;bottom:0;background:var(--s1);border-radius:0 4px 4px 0;min-width:2px}
+  .hb .hv{font-variant-numeric:tabular-nums;font-weight:600;min-width:42px;text-align:right}
+  .hb .hrow{display:contents;cursor:pointer}
+  .hb .hrow:hover .hl{color:var(--navy2);text-decoration:underline}
+  .dchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .dchips button{border:1px solid #c9cfda;background:#fff;border-radius:16px;padding:5px 11px;font:500 12px inherit;color:var(--text);cursor:pointer}
+  .dchips button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:8px -4px 0;padding:0 4px}
+  table.dt{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;min-width:520px}
+  .dt th{font-size:11px;color:var(--muted);font-weight:600;text-align:right;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
+  .dt th:first-child,.dt td:first-child{text-align:left}
+  .dt th.on{color:var(--navy)}
+  .dt td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  .dt td.nm{white-space:normal;min-width:150px}
+  .dt td.nm b{display:block;font-weight:600;direction:auto;text-align:left}
+  .dt td.nm small{display:block;color:var(--muted);font-size:11px}
+  .dt tr.cl{cursor:pointer}.dt tr.cl:hover td{background:#f6f8fb}
+  .dt tr.nb td{background:#fdf3ec}
+  .dt tr.tt td{font-weight:700;background:#f6f8fb;border-bottom:0}
+  .dt td.mu{color:var(--muted)}
+  .regbar{display:flex;gap:2px;height:14px;margin-top:10px}
+  .regbar i{display:block;height:100%}
+  .regbar i:first-child{border-radius:4px 0 0 4px}.regbar i:last-child{border-radius:0 4px 4px 0}
+  .reglg{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:8px;font-size:13px}
+  .reglg span{display:flex;align-items:center;gap:6px}
+  .reglg i{display:inline-block;width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+  .reglg b{margin-left:auto;font-variant-numeric:tabular-nums}
+  .fu{border-top:1px solid var(--line);padding:9px 0;display:flex;gap:10px;align-items:flex-start}
+  .fu:first-of-type{border-top:0}
+  .fu .ic{flex:0 0 auto;width:22px;height:22px;border-radius:50%;color:#fff;font:700 12px/22px inherit;text-align:center}
+  .fu .ic.c{background:var(--crit)}.fu .ic.w{background:var(--warnc);color:#3d2a00}.fu .ic.g{background:var(--good)}
+  .fu .tx{flex:1;font-size:13px;min-width:0}
+  .fu .tx b{display:block;font-size:14px}
+  .fu .lk{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px}
+  .fu .lk a{color:var(--navy2);text-decoration:none;font-size:12px;cursor:pointer;direction:auto}
+  .sback{display:inline-block;margin-bottom:8px;color:var(--navy2);font-weight:600;font-size:13px;cursor:pointer;border:0;background:none;padding:0}
+  .dbnote{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
+  .mtr{height:10px;background:#cde2fb;border-radius:0 4px 4px 0;margin:4px 0 4px;overflow:hidden}
+  .mtr b{display:block;height:100%;background:var(--s1);border-radius:0 4px 4px 0}
 </style>
 </head>
 <body>
@@ -195,6 +298,7 @@
 <!-- HOME -->
 <section id="v-home" class="hidden">
   <div class="tiles">
+    <button class="tile hidden" id="tDash" onclick="go('dash')" style="border-left-color:#2a78d6"><b>Dashboard</b><span>Snacks and kitchen figures by day, week, month or the whole programme – all schools, an area, a district, a kitchen or one school.</span></button>
     <button class="tile inf" onclick="go('info')" style="border-left-color:#548235"><b>School info <span id="tInfoBadge"></span></b><span>Students, allergies, recess time, contacts and working days. Changes go to your Project Officer for approval.</span></button>
     <button class="tile inf" onclick="go('hc')" style="border-left-color:#7030a0"><b>Headcount</b><span id="tHcText">Registration (from the school focal point) and your headcount, per grade and section.</span></button>
     <button class="tile hidden" id="tKitchen" onclick="go('kitchen')" style="border-left-color:#c55a11"><b>Kitchen sandwiches <span id="tKBadge"></span></b><span id="tKText">Sandwiches needed per school, kitchen confirmation and the number distributed.</span></button>
@@ -437,6 +541,25 @@
   </div>
 </section>
 
+<!-- DASHBOARD (v9.0) -->
+<section id="v-dash" class="hidden db">
+  <div class="card dfil">
+    <div class="seg" id="dbMod"><button data-v="snacks" onclick="dbSet('mod','snacks')">Snacks<small>in-school + nearby on snacks</small></button><button data-v="kitchen" onclick="dbSet('mod','kitchen')">Kitchens<small>sandwiches</small></button></div>
+    <div class="seg" id="dbPer"><button data-v="day" onclick="dbSet('period','day')">Day</button><button data-v="week" onclick="dbSet('period','week')">Week</button><button data-v="month" onclick="dbSet('period','month')">Month</button><button data-v="all" onclick="dbSet('period','all')">Programme</button></div>
+    <div class="row2">
+      <div id="dbWhenW"><label for="dbWhen" id="dbWhenL">Week</label><select id="dbWhen" onchange="dbWhen(this.value)"></select><input id="dbDay" type="date" class="hidden" onchange="dbWhen(this.value)"></div>
+      <div><label for="dbArea">Area</label><select id="dbArea" onchange="dbScope('area',this.value)"></select></div>
+      <div><label for="dbCaza">District</label><select id="dbCaza" onchange="dbScope('caza',this.value)"></select></div>
+      <div id="dbKitW" class="hidden"><label for="dbKit">Kitchen</label><select id="dbKit" onchange="dbScope('kid',this.value)"></select></div>
+      <div><label for="dbType">Schools</label><select id="dbType" onchange="dbScope('type',this.value)"></select></div>
+    </div>
+    <label for="dbSchool">School</label>
+    <select id="dbSchool" data-pkall="1" onchange="dbScope('sid',this.value)"></select>
+  </div>
+  <div class="err" id="dbErr"></div>
+  <div id="dbBody"></div>
+</section>
+
 <!-- KITCHEN -->
 <section id="v-kitchen" class="hidden">
   <div class="card">
@@ -451,6 +574,7 @@
   <div id="kBody"></div>
 </section>
 </main>
+<div class="pk hidden" id="pk" onclick="if(event.target===this)pickClose()"><div class="pkp" role="dialog" aria-label="Choose a school"><div class="pkh"><input id="pkQ" type="search" placeholder="Search name, village, ID or monitor" autocomplete="off" oninput="pickList()"><button type="button" onclick="pickClose()">Close</button></div><div class="pkc" id="pkC"></div><div class="pkl" id="pkL"></div></div></div>
 <div class="spin hidden" id="spin"><div></div></div>
 <div class="upd hidden" id="upd">Updating…</div>
 
@@ -543,10 +667,12 @@ busy(true);
   var su=load('snk_uid'), sp=load('snk_pin');
   if(sp && su && (!qu || qu.toUpperCase()===su)){ S.autoLogin=true; $('lRem').checked=true; doLogin(su, sp, true); }
 })();
+/* v9.0: the Viewer role is called WFP (old "Viewer" rows still work) */
+function roleLabel(r){ return /^viewer$/i.test(String(r||'').trim()) ? 'WFP' : r; }
 function fillUsers(b){
   if(!S.user) $('hsub').textContent = 'HAND';
-  var groups = {}; b.users.forEach(function(u){ (groups[u.role]=groups[u.role]||[]).push(u); });
-  var order=['Area Monitor','Project Officer','Senior Project Officer','Project Manager','Viewer'];
+  var groups = {}; b.users.forEach(function(u){ var g=roleLabel(u.role); (groups[g]=groups[g]||[]).push(u); });
+  var order=['Area Monitor','Kitchen Supervisor','Project Officer','Senior Project Officer','Project Manager','MEAL','WFP'];
   var h='<option value="">Select your name</option>';
   order.concat(Object.keys(groups).filter(function(k){return order.indexOf(k)<0;})).forEach(function(r){
     if(!groups[r]) return;
@@ -592,7 +718,7 @@ function doLogin(uid, pin, auto){
 function applyLogin(r, uid, pin){
     S.user=r.user; S.uid=uid; S.pin=pin; S.schools=r.schools; S.infoSchools=r.infoSchools||r.schools; S.reasons=r.reasons; S.now=r.now; S.weeks=r.weeks; S.rules=r.rules;
     store('snk_uid',uid); store('snk_pin', $('lRem').checked ? pin : null);
-    $('hsub').textContent = r.user.name+' · '+r.user.role;
+    $('hsub').textContent = r.user.name+' · '+roleLabel(r.user.role);
     $('tPlan').textContent = 'Forecast per school, day and shift. Closes '+r.rules.planCutoff+' for the following week.';
     $('tDaily').textContent = 'Received, distributed and leftovers. Each day can be entered until '+r.rules.dailyCutoff+(r.rules.dailyDays?' the next day.':'.');
     $('rules').innerHTML =
@@ -612,24 +738,27 @@ function applyLogin(r, uid, pin){
     Array.prototype.forEach.call(document.querySelectorAll('.tile.snk'), function(t){ t.classList.toggle('hidden', !hasSnack); });
     Array.prototype.forEach.call(document.querySelectorAll('.tile.inf'), function(t){ t.classList.toggle('hidden', !hasInfo); });
     $('tKitchen').classList.toggle('hidden', !hasK);
+    $('tDash').classList.toggle('hidden', !r.user.dash);
     kBadge();
     var kr = hasK ? '• <b>Kitchen sandwiches</b>: send the number needed by <b>'+esc(r.kRules.am)+'</b> (AM)'+(r.kRules.shifts.indexOf('PM')>=0?' and <b>'+esc(r.kRules.pm)+'</b> (PM)':'')+'. You can correct it until the kitchen confirms.<br>'+
       '• After the kitchen confirms, prepared = the order and distributed = prepared. If sandwiches are left over, or the kitchen prepared a different number, press <b>Leftover</b> next to the school and enter prepared and leftover – distributed is worked out (prepared – leftover). If nothing is entered, the day counts as all distributed with no leftover. Same day applies at once; after that the Project Officer approves.' : '';
     if(!hasSnack) $('rules').innerHTML = kr + '<br>• <b>School info</b>: working days, students with allergies, student numbers and PM changes go to your Project Officer for approval.';
     else if(kr) $('rules').innerHTML += '<br>'+kr;
     $('lPin').value='';
+    if(r.user.dash && !r.user.infoOnly) $('rules').innerHTML+='<br>• <b>Dashboard</b>: snacks and kitchen figures for every school – view only.';
     if(!r.user.canEnter){ $('pSave').classList.add('hidden'); }
     if(r.user.infoOnly){ // MEAL and Viewer: School info only, view only
       Array.prototype.forEach.call(document.querySelectorAll('.tile.snk'), function(t){ t.classList.add('hidden'); });
       $('tKitchen').classList.add('hidden'); $('tInfoBadge').innerHTML='';
       var ti=document.querySelector('.tile.inf > span'); if(ti) ti.textContent='Students, allergies, recess time, contacts and working days – view only.';
       $('tHcText').textContent='Registration and headcount per grade and section – view only.';
-      $('rules').innerHTML='• <b>School info</b>: view only – students, allergies, recess times, contacts and working days for every school.';
+      $('rules').innerHTML='• <b>School info</b>: view only – students, allergies, recess times, contacts and working days for every school.'+(r.user.dash?'<br>• <b>Dashboard</b>: snacks and kitchen figures for every school – view only.':'');
     }
 }
 function signOut(){ if(S.uid) store('snl|'+S.uid,null); S.user=null; S.pin=''; store('snk_pin',null); go('login'); }
 function go(v){
-  ['login','home','info','plan','daily','kitchen','hc'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
+  ['login','home','info','plan','daily','kitchen','hc','dash'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
+  if(typeof dbTipOff==='function') dbTipOff();
   $('btnBack').classList.toggle('hidden', v==='login'||v==='home');
   $('btnOut').classList.toggle('hidden', v==='login');
   if(v==='login') $('hsub').textContent='HAND';
@@ -638,6 +767,7 @@ function go(v){
   if(v==='daily') initDaily();
   if(v==='kitchen') initKitchen();
   if(v==='hc') initHc();
+  if(v==='dash') initDash();
   window.scrollTo(0,0);
 }
 function schoolOpts(sel, status, kind){
@@ -648,9 +778,9 @@ function schoolOpts(sel, status, kind){
     var st=status&&status[s.id], mark='';
     if(st){ var need=kind==='p'?st.planNeed:st.dailyNeed, have=kind==='p'?st.planHave:st.dailyHave;
       mark = need===0 ? '  ·  no shift' : have>=need ? '  ✓' : have>0 ? '  · '+have+'/'+need : '  · to do'; }
-    h+='<option value="'+s.id+'">'+esc(s.name)+' – '+esc(s.village)+(mixed?'  · '+(s.modality==='School kitchen'?'kitchen':s.modality==='In-school snacks'?'snacks':'nearby'):'')+mark+'</option>';
+    h+='<option value="'+s.id+'" data-q="'+esc((s.monitor||'')+' '+(s.kitchenName||''))+'">'+esc(s.name)+' – '+esc(s.village)+(mixed?'  · '+(s.modality==='School kitchen'?'kitchen':s.modality==='In-school snacks'?'snacks':'nearby'):'')+mark+'</option>';
   });
-  sel.innerHTML=h; sel.value=cur;
+  sel.innerHTML=h; sel.value=cur; pickSync(sel.id);
 }
 
 
@@ -883,6 +1013,7 @@ function loadPlanStatus(){
   if($('pSchool').value) loadPlan();
 }
 function loadPlan(){
+  pickSync('pSchool');
   var sid=$('pSchool').value; show($('pErr'),''); show($('pOk'),''); $('pNext').classList.add('hidden');
   if(!sid){ $('pBody').classList.add('hidden'); return; }
   swr('plan', $('pBody'), 'apiGetPlan', [S.uid,S.pin,sid,$('pWeek').value], function(r){ S.plan=r; renderPlan(); },
@@ -1011,6 +1142,7 @@ function decide(id,dec){
     .catch(function(e){ busy(false); alert(e); });
 }
 function loadInfo(keep){
+  pickSync('iSchool');
   var sid=$('iSchool').value; show($('iErr'),''); if(keep!==true){ show($('iOk'),''); show($('aOk'),''); show($('oOk'),''); S.ops=null; }
   if(!sid){ $('iBody').classList.add('hidden'); return; }
   swr('info', $('iBody'), 'apiGetInfo', [S.uid,S.pin,sid], function(r){ S.info=r; renderInfo(); }, function(e){ if($('iBody').classList.contains('hidden')) alert(e); else show($('iErr'),e); });
@@ -1166,6 +1298,7 @@ function hTab(t){
   if(H.d){ hGradeOpts(); hRender(); }
 }
 function hLoad(){
+  pickSync('hSchool');
   var sid=$('hSchool').value; show($('hErr'),''); show($('hOk'),'');
   if(!sid){ $('hBody').classList.add('hidden'); $('hPick').classList.add('hidden'); return; }
   var ds=$('hDate').value||todayLocal();
@@ -1359,6 +1492,7 @@ function loadDailyStatus(){
   if($('dSchool').value) loadDaily();
 }
 function loadDaily(){
+  pickSync('dSchool');
   var sid=$('dSchool').value; show($('dErr'),''); show($('dOk'),''); $('dNext').classList.add('hidden');
   if(!sid){ $('dBody').classList.add('hidden'); return; }
   swr('daily', $('dBody'), 'apiGetDaily', [S.uid,S.pin,sid,$('dDate').value], function(r){ S.daily=r; renderDaily(); },
@@ -1444,6 +1578,540 @@ function saveDaily(){
   }).catch(function(e){ busy(false); show($('dErr'),e); });
 }
 
+
+/* ---------- searchable school list (v9.0) ----------
+   Each school <select> stays in the page (all screens read .value and its onchange), hidden behind a button.
+   The button opens a list with a search box: name (Arabic or English), village, school ID, monitor or district. */
+var PK = { id:'', items:[], hit:[], hl:0 };
+function normTxt(t){
+  t=String(t==null?'':t).toLowerCase();
+  try{ t=t.normalize('NFKD'); }catch(e){}
+  return t.replace(/[̀-ًͯ-ٰٟـ]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه')
+    .replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/[–—\-·,.()]/g,' ').replace(/\s+/g,' ').trim();
+}
+function pickInit(id){
+  var sel=$(id); if(!sel || sel.getAttribute('data-pkon')) return;
+  sel.setAttribute('data-pkon','1'); sel.classList.add('pksel');
+  var b=document.createElement('button'); b.type='button'; b.className='pkbtn'; b.id=id+'_pk';
+  b.onclick=function(){ pickOpen(id); };
+  sel.parentNode.insertBefore(b, sel.nextSibling);
+  pickSync(id);
+}
+function pickSync(id){
+  var sel=$(id), b=$(id+'_pk'); if(!sel||!b) return;
+  var o=sel.options[sel.selectedIndex];
+  if(o && o.value){ var t=o.text, i=t.indexOf(' – ');
+    b.innerHTML='<span class="pkv" dir="auto">'+esc(i>0?t.substr(0,i):t)+'</span>'+(i>0?'<span class="pks" dir="auto">'+esc(t.substr(i+3))+'</span>':''); }
+  else b.innerHTML='<span class="pkph">'+esc(o?o.text:'Select a school')+'</span>';
+  b.disabled=sel.disabled;
+}
+function pickOpen(id){
+  var sel=$(id); PK.id=id; PK.items=[];
+  Array.prototype.forEach.call(sel.options,function(o){
+    if(!o.value && !sel.getAttribute('data-pkall')) return;
+    var t=o.text, i=t.indexOf(' – ');
+    PK.items.push({ v:o.value, a:i>0?t.substr(0,i):t, b:i>0?t.substr(i+3):'', q:normTxt(t+' '+o.value+' '+(o.getAttribute('data-q')||'')) });
+  });
+  $('pkQ').value=''; $('pk').classList.remove('hidden'); document.body.style.overflow='hidden';
+  pickList();
+  setTimeout(function(){ try{ $('pkQ').focus(); }catch(e){} },30);
+}
+function pickClose(){ $('pk').classList.add('hidden'); document.body.style.overflow=''; PK.id=''; }
+function pickList(){
+  var sel=$(PK.id), raw=$('pkQ').value, q=normTxt(raw), toks=q?q.split(' '):[];
+  PK.hit=PK.items.filter(function(x){ return !x.v ? !q : toks.every(function(t){ return x.q.indexOf(t)>=0; }); });
+  PK.hl=0;
+  var all=PK.items.filter(function(x){return x.v;}).length, n=PK.hit.filter(function(x){return x.v;}).length;
+  $('pkC').textContent = q ? n+' of '+all+' school'+(all===1?'':'s') : all+' school'+(all===1?'':'s')+' · type part of the name, village, ID or monitor';
+  $('pkL').innerHTML = PK.hit.length ? PK.hit.map(function(x,i){
+    return '<button type="button" class="pki'+(x.v?'':' all')+(x.v===sel.value?' cur':'')+(i===0&&q?' hl':'')+'" onclick="pickChoose('+i+')"><b dir="auto">'+esc(x.a)+'</b>'+(x.b?'<small dir="auto">'+esc(x.b)+'</small>':'')+'</button>';
+  }).join('') : '<div class="pkn">No school matches "'+esc(raw)+'".</div>';
+}
+function pickHl(d){
+  var L=$('pkL').querySelectorAll('.pki'); if(!L.length) return;
+  PK.hl=Math.max(0,Math.min(L.length-1,PK.hl+d));
+  Array.prototype.forEach.call(L,function(el,i){ el.classList.toggle('hl',i===PK.hl); });
+  try{ L[PK.hl].scrollIntoView({block:'nearest'}); }catch(e){}
+}
+function pickChoose(i){
+  var x=PK.hit[i], sel=$(PK.id); if(!x||!sel) return;
+  pickClose();
+  var changed=sel.value!==x.v; sel.value=x.v; pickSync(sel.id);
+  if(changed){ var ev; try{ ev=new Event('change',{bubbles:true}); }catch(e){ ev=document.createEvent('HTMLEvents'); ev.initEvent('change',true,false); } sel.dispatchEvent(ev); }
+}
+document.addEventListener('keydown',function(e){
+  if(!PK.id) return;
+  if(e.key==='Escape'){ e.preventDefault(); pickClose(); }
+  else if(e.key==='Enter' && document.activeElement===$('pkQ')){ e.preventDefault(); if(PK.hit.length) pickChoose(PK.hl); }
+  else if(e.key==='ArrowDown'){ e.preventDefault(); pickHl(1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); pickHl(-1); }
+});
+
+/* ---------- dashboard (v9.0): Project Manager, MEAL and WFP – view only ----------
+   One server call per modality + period (apiDash). Area, district, kitchen, type and school are filtered here on the phone. */
+var D = { mod:'snacks', period:'week', ds:'', area:'', caza:'', type:'', kid:'', sid:'', trend:'qty', by:'cov', sort:'', dir:1, d:null, charts:[], drill:[], rows:[] };
+var DMF=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function dbN(v){ return v==null||isNaN(v) ? '–' : Math.round(v).toLocaleString('en-GB'); }
+function dbC(v){ v=+v||0; var a=Math.abs(v); return a>=1e6 ? (v/1e6).toFixed(1).replace(/\.0$/,'')+'M' : a>=1e4 ? Math.round(v/1e3)+'K' : a>=1e3 ? (v/1e3).toFixed(1).replace(/\.0$/,'')+'K' : String(Math.round(v)); }
+function dbP(a,b){ return b>0 ? Math.round(100*a/b) : null; }
+function dbPs(p){ return p==null ? '–' : p+'%'; }
+function dbS(ds){ var p=ds.split('-'); return (+p[2])+' '+MN[+p[1]-1]; }
+function dbMon(ds){ var p=ds.split('-'), d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2])); return addDays(ds,-((d.getUTCDay()+6)%7)); }
+function dbStat(p, good, watch){
+  if(p==null) return '';
+  var c = p>=(good||90) ? 'g' : p>=(watch||75) ? 'w' : 'c';
+  return '<span class="stt '+c+'"><i>'+(c==='g'?'✓':c==='w'?'!':'✕')+'</i>'+(c==='g'?'On track':c==='w'?'Watch':'Low')+'</span>';
+}
+function dbF(f){ return D.d.fields.indexOf(f); }
+function dbV(a,f){ return a[dbF(f)]||0; }
+
+function initDash(){
+  if(!D.ds) D.ds=todayLocal();
+  dbSegs(); dbWhenOpts(); dbLoad();
+}
+function dbSegs(){
+  Array.prototype.forEach.call($('dbMod').children,function(b){ b.classList.toggle('on', b.getAttribute('data-v')===D.mod); });
+  Array.prototype.forEach.call($('dbPer').children,function(b){ b.classList.toggle('on', b.getAttribute('data-v')===D.period); });
+  $('dbKitW').classList.toggle('hidden', D.mod!=='kitchen');
+}
+function dbSet(k,v){
+  if(D[k]===v) return;
+  D[k]=v;
+  if(k==='mod'){ D.kid=''; D.type=''; D.sid=''; D.d=null; }
+  if(k==='period' && D.ds>todayLocal()) D.ds=todayLocal();
+  D.sort=''; dbSegs(); dbWhenOpts(); dbLoad();
+}
+function dbWhenOpts(){
+  var t=todayLocal(), st=(D.d&&D.d.start)||addDays(t,-56), per=D.period, h='';
+  if(st>t) st=t;
+  $('dbWhenW').classList.toggle('hidden', per==='all');
+  $('dbDay').classList.toggle('hidden', per!=='day'); $('dbWhen').classList.toggle('hidden', per==='day');
+  $('dbWhenL').textContent = per==='day' ? 'Day' : per==='week' ? 'Week' : 'Month';
+  $('dbWhenL').setAttribute('for', per==='day' ? 'dbDay' : 'dbWhen');
+  if(per==='day'){ $('dbDay').max=t; $('dbDay').min=st; $('dbDay').value = D.ds>t ? t : D.ds; }
+  else if(per==='week'){
+    var w=dbMon(t), w0=dbMon(st);
+    for(var x=addDays(w,7); x>=w0; x=addDays(x,-7))
+      h+='<option value="'+x+'">'+(x===w?'This week · ':x===addDays(w,7)?'Next week · ':x===addDays(w,-7)?'Last week · ':'')+dbS(x)+' – '+dbS(addDays(x,6))+'</option>';
+    $('dbWhen').innerHTML=h; $('dbWhen').value=dbMon(D.ds); if(!$('dbWhen').value) $('dbWhen').value=w;
+  } else if(per==='month'){
+    var y=+t.substr(0,4), mo=+t.substr(5,2), y0=+st.substr(0,4), m0=+st.substr(5,2);
+    while(y>y0 || (y===y0 && mo>=m0)){
+      var v=y+'-'+('0'+mo).slice(-2)+'-01';
+      h+='<option value="'+v+'">'+DMF[mo-1]+' '+y+(v.substr(0,7)===t.substr(0,7)?' · this month':'')+'</option>';
+      mo--; if(!mo){ mo=12; y--; }
+    }
+    $('dbWhen').innerHTML=h; $('dbWhen').value=D.ds.substr(0,7)+'-01'; if(!$('dbWhen').value) $('dbWhen').value=t.substr(0,7)+'-01';
+  }
+}
+function dbWhen(v){ if(!v) return; D.ds=v; dbLoad(); }
+function dbArgs(){
+  var ds = D.period==='week' ? dbMon(D.ds) : D.period==='month' ? D.ds.substr(0,7)+'-01' : D.period==='day' ? D.ds : '';
+  return [S.uid,S.pin,{mod:D.mod, period:D.period, ds:ds}];
+}
+function dbLoad(fresh){
+  show($('dbErr'),'');
+  var a=dbArgs();
+  if(fresh) store(cKey('apiDash',a),null);
+  swr('dash', $('dbBody'), 'apiDash', a, function(r){
+    var ns=!D.d || D.d.start!==r.start; D.d=r; if(ns) dbWhenOpts(); dbFilters(); dbRender();
+  }, function(e){ show($('dbErr'),e); });
+}
+/* ---- filters (all on the phone) ---- */
+function dbUniq(a){ var o=[]; a.forEach(function(x){ if(x && o.indexOf(x)<0) o.push(x); }); return o; }
+var DB_AREA=['Bekaa','Baalbek-Hermel'], DB_CAZA=['Zahle','West Bekaa','Rachaya','Baalbek','El Hermel'];
+function dbOrd(list, ref){ return list.sort(function(a,b){ var i=ref.indexOf(a), j=ref.indexOf(b); return (i<0?99:i)-(j<0?99:j) || (a<b?-1:1); }); }
+function dbTypeName(t){ return D.mod==='snacks' ? (t==='N'?'nearby on snacks':'in-school snacks') : (t==='K'?'kitchen school':'nearby'); }
+function dbFilters(){
+  var L=D.d.schools;
+  var areas=dbOrd(dbUniq(L.map(function(s){return s.a;})),DB_AREA); if(areas.indexOf(D.area)<0) D.area='';
+  $('dbArea').innerHTML='<option value="">Both areas</option>'+areas.map(function(a){ return '<option>'+esc(a)+'</option>'; }).join(''); $('dbArea').value=D.area;
+  var cz=dbOrd(dbUniq(L.filter(function(s){ return !D.area||s.a===D.area; }).map(function(s){return s.c;})),DB_CAZA); if(cz.indexOf(D.caza)<0) D.caza='';
+  $('dbCaza').innerHTML='<option value="">All districts</option>'+cz.map(function(a){ return '<option>'+esc(a)+'</option>'; }).join(''); $('dbCaza').value=D.caza;
+  var ks=D.d.kitchens.filter(function(k){ return L.some(function(s){ return s.k===k.id && (!D.area||s.a===D.area) && (!D.caza||s.c===D.caza); }); });
+  if(!ks.some(function(k){return k.id===D.kid;})) D.kid='';
+  $('dbKit').innerHTML='<option value="">All kitchens</option>'+ks.map(function(k){ return '<option value="'+k.id+'">'+esc(k.n)+' – '+esc(k.v)+'</option>'; }).join(''); $('dbKit').value=D.kid;
+  var types = D.mod==='snacks' ? [['','All schools'],['S','In-school snacks'],['N','Nearby schools on snacks']] : [['','All schools'],['K','Kitchen schools'],['N','Nearby schools']];
+  types=types.filter(function(t){ return !t[0] || L.some(function(s){return s.t===t[0];}); });
+  if(!types.some(function(t){return t[0]===D.type;})) D.type='';
+  $('dbType').innerHTML=types.map(function(t){ return '<option value="'+t[0]+'">'+t[1]+'</option>'; }).join(''); $('dbType').value=D.type;
+  var sl=dbList(true);
+  if(D.sid && !sl.some(function(s){return s.id===D.sid;})) D.sid='';
+  $('dbSchool').innerHTML='<option value="">All schools in the selection ('+sl.length+')</option>'+sl.map(function(s){
+    return '<option value="'+s.id+'" data-q="'+esc(s.mon+' '+s.c+' '+(s.kn||''))+'">'+esc(s.n)+' – '+esc(s.v)+' · '+dbTypeName(s.t)+'</option>'; }).join('');
+  $('dbSchool').value=D.sid; pickSync('dbSchool');
+}
+function dbScope(k,v){
+  D[k]=v;
+  if(k==='area') D.caza='';
+  if(k!=='sid') D.sid='';
+  D.sort=''; dbFilters(); dbRender(); window.scrollTo(0, k==='sid'&&v ? 0 : window.scrollY);
+}
+function dbList(noSid){
+  return D.d.schools.filter(function(s){
+    return (!D.area||s.a===D.area) && (!D.caza||s.c===D.caza) && (!D.type||s.t===D.type) && (!D.kid||s.k===D.kid) && (noSid||!D.sid||s.id===D.sid);
+  }).sort(function(a,b){ return DB_AREA.indexOf(a.a)-DB_AREA.indexOf(b.a) || DB_CAZA.indexOf(a.c)-DB_CAZA.indexOf(b.c) || ('SKN'.indexOf(a.t)-'SKN'.indexOf(b.t)) || (a.n<b.n?-1:1); });
+}
+/* ---- adding up ---- */
+function dbZero(n){ var a=[]; for(var i=0;i<n;i++) a.push(0); return a; }
+function dbTot(s){
+  var n=D.d.fields.length, t=dbZero(n), pk=dbF('pk');
+  Object.keys(s.b).forEach(function(b){ var a=s.b[b]; for(var i=0;i<n;i++) if(i!==pk) t[i]+=a[i]; });
+  t[pk]=s.pk||0; return t;
+}
+function dbAgg(list){
+  var n=D.d.fields.length, T=dbZero(n), B=D.d.buckets.map(function(){ return dbZero(n); }), per={}, avg=0, st=0, left=0;
+  var a1=dbF(D.mod==='snacks'?'re':'d'), a2=dbF('fd');
+  list.forEach(function(s){
+    var t=dbTot(s); per[s.id]=t; st+=s.st; left+=s.left||0;
+    for(var i=0;i<n;i++) T[i]+=t[i];
+    Object.keys(s.b).forEach(function(b){ var a=s.b[b], x=B[+b]; for(var i=0;i<n;i++) x[i]+=a[i]; });
+    if(t[a2]) avg+=t[a1]/t[a2];
+  });
+  return { T:T, B:B, per:per, avg:avg, st:st, left:left, n:list.length };
+}
+/* reported share: closed school days + days already reported early */
+function dbRep(t){ var rw=dbV(t,'rw'), den=dbV(t,'due')+rw-dbV(t,'rep'); return { n:rw, d:den, p:dbP(rw,den), open:Math.max(0,dbV(t,'wd')-den) }; }
+function dbCov(t){ return D.mod==='snacks' ? dbP(dbV(t,'re'),dbV(t,'en')) : dbP(dbV(t,'d'),dbV(t,'en')); }
+/* ---- labels ---- */
+function dbPerLabel(){
+  var d=D.d;
+  if(d.period==='day') return dLabel(d.from)+' '+d.from.substr(0,4);
+  if(d.period==='week') return 'Week '+dbS(d.from)+' – '+dbS(d.to)+' '+d.to.substr(0,4);
+  if(d.period==='month') return DMF[+d.from.substr(5,2)-1]+' '+d.from.substr(0,4);
+  return 'Whole programme · since '+dbS(d.start)+' '+d.start.substr(0,4);
+}
+function dbBLabel(k, full){
+  if(D.d.unit==='week') return full ? dbS(k)+' – '+dbS(addDays(k,6)) : dbS(k);
+  return full ? dLabel(k) : DN[(new Date(k+'T12:00:00Z').getUTCDay()+6)%7]+' '+(+k.substr(8,2));
+}
+/* ---- render ---- */
+function dbRender(){
+  var d=D.d, list=dbList(), A=dbAgg(list), T=A.T, h='', one=D.sid ? list[0] : null;
+  D.charts=[]; D.drill=[];
+  var scope=[]; if(D.area) scope.push(D.area); if(D.caza) scope.push(D.caza);
+  if(D.kid){ var kk=d.kitchens.filter(function(k){return k.id===D.kid;})[0]; if(kk) scope.push('Kitchen '+kk.n); }
+  if(D.type) scope.push($('dbType').options[$('dbType').selectedIndex].text.toLowerCase());
+  h+='<div class="card"><div class="dbhd"><div><h2>'+(d.mod==='snacks'?'Snacks':'Kitchen sandwiches')+' · '+esc(dbPerLabel())+'</h2>'+
+    '<div class="meta">'+(one ? '<span dir="auto">'+esc(one.n)+'</span>' : (scope.length?esc(scope.join(' · '))+' · ':'')+A.n+' school'+(A.n===1?'':'s'))+' · '+dbN(A.st)+' students enrolled</div>'+
+    '<div class="meta">Figures as of '+esc(d.at)+' – straight from the tool\'s sheets.</div></div>'+
+    '<div class="dbact"><button onclick="dbLoad(true)" title="Load the latest figures">Refresh</button><button onclick="dbCsv()" title="Download the table as a CSV file">CSV</button></div></div>';
+  if(d.noSnack && d.noSnack.length) h+='<div class="info">No snacks for any school on '+d.noSnack.map(function(r){ return r[0]===r[1]?dLabel(r[0]):dLabel(r[0])+' – '+dLabel(r[1]); }).join(', ')+'.</div>';
+  h+='</div>';
+  if(one) h+=dbSchoolCard(one);
+  if(!list.length){ $('dbBody').innerHTML=h+'<div class="card"><div class="info">No school matches these filters.</div></div>'; return; }
+  var anyData = T[dbF(D.mod==='snacks'?'r':'o')]>0 || T[dbF('p')]>0 || T[dbF('due')]>0;
+  h+=dbKpis(A);
+  if(!anyData) h+='<div class="card"><div class="info">No figures yet for this period. They appear here as soon as monitors enter them.</div></div>';
+  if(d.buckets.length>1) h+=dbTrendCard(A);
+  if(!one && list.length>1) h+=dbByCard(list, A);
+  if(!D.area && !D.caza && !D.kid && !D.type && !D.sid) h+=dbPlanCard();
+  if(d.mod==='kitchen') h+=dbMenuCard(list);
+  h+=dbRegCard(list); h+=dbAlgCard(list); h+=dbFollow(list, A);
+  h+= one ? '' : dbTable(list, A);
+  if(d.buckets.length>1 || one) h+=dbDayTable(A);
+  $('dbBody').innerHTML=h;
+  dbDrawCharts();
+}
+function dbSchoolCard(s){
+  var bits=[esc(s.v), esc(s.c)+(s.a?' · '+esc(s.a):''), 'Monitor: '+esc(s.mon||'–')+(s.po?' · PO: '+esc(s.po):'')];
+  var mod = D.mod==='snacks' ? (s.t==='N' ? 'Nearby school on snacks'+(s.sf?' from '+dLabel(s.sf)+(s.su?' to '+dLabel(s.su):''):'') : 'In-school snacks') : (s.t==='K' ? 'School kitchen' : 'Nearby school – sandwiches from '+(s.kn||'the kitchen'));
+  return '<div class="card"><button class="sback" onclick="dbScope(\'sid\',\'\')">← All schools in the selection</button><div class="school" dir="auto">'+esc(s.n)+'</div>'+
+    '<div class="meta">'+bits.join(' · ')+'</div><div class="chips"><span class="chip">'+esc(mod)+'</span><span class="chip">Enrolled: <b>'+dbN(s.st)+'</b></span><span class="chip">'+esc(s.id)+'</span></div></div>';
+}
+function dbKpi(l, v, sub, hero){ return '<div class="kpi'+(hero?' hero':'')+'"><div class="kl">'+l+'</div><div class="kv">'+v+'</div>'+(sub?'<div class="ks">'+sub+'</div>':'')+'</div>'; }
+function dbKpis(A){
+  var T=A.T, R=dbRep(T), cov=dbCov(T), h='<div class="card"><div class="kpis">';
+  var day=D.d.period==='day', repSub=R.n+' of '+R.d+' school day'+(R.d===1?'':'s')+' reported'+(R.open?' · '+R.open+' still open':'');
+  if(D.mod==='snacks'){
+    var pk=dbV(T,'pk'), pp=dbV(T,'pp'), p=dbV(T,'p');
+    h+=dbKpi(day?'Students reached':'Students reached', dbN(pk), (day?'on this day':D.sid?'highest number reached on one day':'highest number reached on one day, per school, added up')+' · '+dbPs(dbP(pk,A.st))+' of '+dbN(A.st)+' enrolled', true);
+    h+=dbKpi('Coverage '+dbStat(cov), dbPs(cov), 'students reached ÷ students enrolled, on school days');
+    h+=dbKpi('Reporting '+dbStat(R.p,95,80), dbPs(R.p), repSub);
+    if(!day) h+=dbKpi('Average reached per day', dbN(A.avg), D.sid?'per day with snacks':'per day with snacks, all schools added up');
+    h+=dbKpi('Parcels distributed', dbN(dbV(T,'d')), dbV(T,'db') ? 'incl. '+dbN(dbV(T,'db'))+' double portions' : 'received '+dbN(dbV(T,'r')));
+    h+=dbKpi('Received vs planned', dbPs(dbP(dbV(T,'r'),pp)), 'received '+dbN(dbV(T,'r'))+' of '+dbN(pp)+' planned'+(p>pp?' · '+dbN(p-pp)+' more planned after today':''));
+    h+=dbKpi('Leftover in schools', dbN(A.left), 'parcels in the school stores '+(D.d.to<D.d.today?'at the end of the period':'now'));
+    h+=dbKpi('Damaged / returned', dbN(dbV(T,'x')), dbV(T,'od') ? dbV(T,'od')+' school day'+(dbV(T,'od')>1?'s':'')+' above enrolment' : 'no day above enrolment');
+  } else {
+    var kp=dbV(T,'pk'), prep=dbV(T,'p'), conf=dbV(T,'conf');
+    h+=dbKpi('Students reached', dbN(kp), (day?'on this day':D.sid?'highest number of sandwiches given on one day':'highest number of sandwiches given on one day, per school, added up')+' · '+dbPs(dbP(kp,A.st))+' of '+dbN(A.st)+' enrolled', true);
+    h+=dbKpi('Coverage '+dbStat(cov), dbPs(cov), 'sandwiches distributed ÷ students enrolled, on school days');
+    h+=dbKpi('Orders sent '+dbStat(R.p,95,80), dbPs(R.p), repSub.replace('reported','with an order')+(dbV(T,'late')?' · '+dbV(T,'late')+' late':''));
+    if(!day) h+=dbKpi('Average per day', dbN(A.avg), D.sid?'sandwiches per day':'sandwiches per day, all schools added up');
+    h+=dbKpi('Sandwiches distributed', dbN(dbV(T,'d')), 'prepared '+dbN(prep)+' · ordered '+dbN(dbV(T,'o')));
+    h+=dbKpi('Leftover', dbN(dbV(T,'l')), dbPs(dbP(dbV(T,'l'),prep))+' of the sandwiches prepared');
+    h+=dbKpi('Confirmed by the kitchen', dbPs(dbP(conf,dbV(T,'rw'))), conf+' of '+dbV(T,'rw')+' orders'+(dbV(T,'flag')?' · '+dbV(T,'flag')+' do not add up':''));
+    h+=dbKpi('Days on snacks', dbN(dbV(T,'sn')), 'nearby school days served with snacks instead of sandwiches');
+  }
+  return h+'</div></div>';
+}
+/* ---- trend (one chart, three views) ---- */
+function dbTrendCard(A){
+  var opts = D.mod==='snacks' ? [['qty','Parcels'],['cov','Coverage %'],['rep','Reporting %']] : [['qty','Sandwiches'],['cov','Coverage %'],['rep','Orders sent %']];
+  return '<div class="card"><h2>'+(D.d.unit==='week'?'Week by week':'Day by day')+'</h2><div class="dchips">'+opts.map(function(o){ return '<button class="'+(D.trend===o[0]?'on':'')+'" onclick="D.trend=\''+o[0]+'\';dbRender()">'+o[1]+'</button>'; }).join('')+
+    '</div><div class="chart" id="dbTrend"></div><div class="lgd" id="dbTrendL"></div></div>';
+}
+function dbTrendCfg(A){
+  var d=D.d, labels=d.buckets.map(function(k){ return dbBLabel(k); }), full=d.buckets.map(function(k){ return dbBLabel(k,true); });
+  var B=A.B, cfg={ labels:labels, full:full, series:[], stacked:false, pct:false };
+  if(D.trend==='cov'){ cfg.pct=true; cfg.series=[{ n:'Coverage', c:'var(--s1)', k:'line', v:B.map(function(x){ return dbCov(x); }) }]; }
+  else if(D.trend==='rep'){ cfg.pct=true; cfg.series=[{ n:D.mod==='snacks'?'Reported':'Orders sent', c:'var(--s1)', k:'line', v:B.map(function(x){ return dbRep(x).p; }) }]; }
+  else if(D.mod==='snacks') cfg.series=[{ n:'Distributed', c:'var(--s1)', k:'bar', v:B.map(function(x){ return dbV(x,'d'); }) }, { n:'Planned', c:'var(--s2)', k:'line', v:B.map(function(x){ return dbV(x,'p')||null; }) }];
+  else { cfg.stacked=true; cfg.series=[{ n:'Distributed', c:'var(--s1)', k:'bar', v:B.map(function(x){ return dbV(x,'d'); }) }, { n:'Leftover', c:'var(--s2)', k:'bar', v:B.map(function(x){ return dbV(x,'l'); }) }]; }
+  return cfg;
+}
+/* ---- breakdown by district / kitchen / school ---- */
+function dbByCard(list, A){
+  var g=[], key, title;
+  if(D.mod==='snacks' && !D.caza){ key='caza'; title='By district'; }
+  else if(D.mod==='kitchen' && !D.kid){ key='kid'; title='By kitchen'; }
+  else { key='sid'; title='By school'; }
+  var groups={}, order=[];
+  list.forEach(function(s){
+    var k = key==='caza' ? s.c : key==='kid' ? s.k : s.id;
+    if(!groups[k]){ groups[k]={ k:k, l: key==='caza' ? s.c : key==='kid' ? (s.kn||s.k) : s.n, t:dbZero(D.d.fields.length), st:0, n:0 }; order.push(k); }
+    var t=A.per[s.id], G=groups[k]; for(var i=0;i<t.length;i++) G.t[i]+=t[i]; G.st+=s.st; G.n++;
+  });
+  var rows=order.map(function(k){ var G=groups[k], v = D.by==='cov' ? dbCov(G.t) : D.by==='rep' ? dbRep(G.t).p : dbV(G.t,'pk');
+    return { k:k, l:G.l, v:v, sub: key==='sid' ? '' : G.n+' school'+(G.n>1?'s':''), st:G.st }; });
+  rows.sort(function(a,b){ return (b.v==null?-1:b.v)-(a.v==null?-1:a.v); });
+  var pct=D.by!=='reach', mx = pct ? 100 : Math.max.apply(null, rows.map(function(r){return r.v||0;}).concat([1]));
+  var opts=[['cov','Coverage %'],['reach','Students reached'],['rep',D.mod==='snacks'?'Reporting %':'Orders sent %']];
+  var h='<div class="card"><h2>'+title+'</h2><div class="dchips">'+opts.map(function(o){ return '<button class="'+(D.by===o[0]?'on':'')+'" onclick="D.by=\''+o[0]+'\';dbRender()">'+o[1]+'</button>'; }).join('')+'</div><div class="hb">';
+  rows.forEach(function(r){
+    var i=D.drill.push([key,r.k])-1, w = r.v==null ? 0 : Math.min(100, 100*r.v/mx);
+    h+='<div class="hrow" onclick="dbDrill('+i+')" title="'+esc(r.l)+(r.sub?' · '+r.sub:'')+' · '+dbN(r.st)+' enrolled"><div class="hl" dir="auto">'+esc(r.l)+'</div><div class="ht"><b style="width:'+w.toFixed(1)+'%"></b></div><div class="hv">'+(r.v==null?'–':pct?r.v+'%':dbN(r.v))+'</div></div>';
+  });
+  return h+'</div><div class="dbnote">Tap a line to open it.'+(D.by==='reach'?' Students reached = highest number reached on one day.':'')+'</div></div>';
+}
+function dbDrill(i){
+  var x=D.drill[i]; if(!x) return;
+  if(x[0]==='caza'){ var s=D.d.schools.filter(function(z){ return z.c===x[1]; })[0]; if(s && !D.area) D.area=s.a; D.caza=x[1]; D.sid=''; }
+  else if(x[0]==='kid'){ D.kid=x[1]; D.sid=''; }
+  else D.sid=x[1];
+  D.sort=''; dbFilters(); dbRender(); window.scrollTo(0,0);
+}
+/* ---- against the WFP plan (Annex 5), since the start of the programme ---- */
+function dbPlanCard(){
+  var d=D.d, t=d.target, c=d.cum; if(!t) return '';
+  var sn=d.mod==='snacks', own=d.schools.filter(function(s){ return sn ? s.t==='S' : true; }), st=own.reduce(function(a,s){return a+s.st;},0);
+  function meter(l, v, of, sub){ var p=dbP(v,of), w=Math.min(100,p||0);
+    return '<div class="sec" style="margin-top:12px">'+l+'</div><div class="mtr"><b style="width:'+w+'%"></b></div><div class="meta">'+dbN(v)+' of '+dbN(of)+' · <b>'+dbPs(p)+'</b>'+(sub?' · '+sub:'')+'</div>'; }
+  return '<div class="card"><h2>Against the WFP plan</h2><div class="meta">Annex 5 planned caseload, Bekaa &amp; Baalbek-Hermel – since the start of the programme, whatever the period above.</div>'+
+    meter(sn?'Schools on in-school snacks':'Schools on school kitchens (nearby included)', own.length, t.schools)+
+    meter('Students enrolled', st, t.students, sn?'in-school snack schools':'kitchen and nearby schools')+
+    meter(sn?'Parcels distributed so far':'Sandwiches distributed so far', c.qty, t.qty, sn?'nearby schools on snacks included':'')+
+    meter('Feeding days so far', c.days, t.days, 'days with at least one distribution')+
+    '<div class="dbnote">Targets are in Settings ("Target – …") – change them there if WFP revises the caseload.</div></div>';
+}
+/* ---- kitchen menu ---- */
+function dbMenuCard(list){
+  var kids=dbUniq(list.map(function(s){ return s.k; })), S2={}, F2={}, n=0;
+  kids.forEach(function(k){ var m=D.d.menus[k]; if(!m) return; n+=m.n;
+    Object.keys(m.s).forEach(function(x){ S2[x]=(S2[x]||0)+m.s[x]; }); Object.keys(m.f).forEach(function(x){ F2[x]=(F2[x]||0)+m.f[x]; }); });
+  if(!n) return '';
+  function bars(o){ var k=Object.keys(o).sort(function(a,b){ return o[b]-o[a]; }), mx=o[k[0]]||1;
+    return '<div class="hb">'+k.map(function(x){ return '<div class="hrow"><div class="hl">'+esc(x)+'</div><div class="ht"><b style="width:'+(100*o[x]/mx).toFixed(1)+'%"></b></div><div class="hv">'+o[x]+'</div></div>'; }).join('')+'</div>'; }
+  return '<div class="card"><h2>Menu served</h2><div class="meta">'+n+' kitchen day'+(n>1?'s':'')+' confirmed (each kitchen and shift counted once a day).</div>'+
+    '<div class="sec">Sandwich</div>'+bars(S2)+'<div class="sec">Fruit / vegetable</div>'+bars(F2)+'</div>';
+}
+/* ---- registration and headcount ---- */
+function dbRegCard(list){
+  var R={lb:0,lg:0,nb:0,ng:0}, nr=0, H={b:0,g:0,reg:0}, nh=0, last='', rst=0;
+  list.forEach(function(s){ var r=D.d.reg[s.id], c=D.d.hc[s.id];
+    if(r){ nr++; rst+=s.st; R.lb+=r.lb; R.lg+=r.lg; R.nb+=r.nb; R.ng+=r.ng; }
+    if(c){ nh++; H.b+=c.b; H.g+=c.g; H.reg+=c.reg; if(c.last>last) last=c.last; } });
+  var tot=R.lb+R.lg+R.nb+R.ng, hm=DMF[+D.d.hcMonth.substr(5,2)-1], h='<div class="card"><h2>Registration and headcount</h2>';
+  if(!tot) h+='<div class="info">No registration entered yet'+(list.length>1?' for these schools':'')+'. Figures appear here once monitors fill in the Headcount tile.</div>';
+  else {
+    var seg=[['lb','Lebanese boys','var(--s1)'],['lg','Lebanese girls','var(--s2)'],['nb','Non-Lebanese boys','var(--s3)'],['ng','Non-Lebanese girls','var(--s4)']];
+    h+='<div class="kpis">'+dbKpi('Registered students', dbN(tot), (list.length>1?nr+' of '+list.length+' schools entered · ':'')+dbPs(dbP(tot,rst))+' of their enrolment in School Info')+
+      dbKpi('Lebanese / non-Lebanese', dbPs(dbP(R.lb+R.lg,tot))+' / '+dbPs(dbP(R.nb+R.ng,tot)), 'girls '+dbPs(dbP(R.lg+R.ng,tot))+' · boys '+dbPs(dbP(R.lb+R.nb,tot)))+'</div>';
+    h+='<div class="regbar">'+seg.filter(function(x){ return R[x[0]]>0; }).map(function(x){ return '<i style="flex:'+R[x[0]]+';background:'+x[2]+'" title="'+x[1]+': '+dbN(R[x[0]])+'"></i>'; }).join('')+'</div>';
+    h+='<div class="reglg">'+seg.map(function(x){ return '<span><i style="background:'+x[2]+'"></i>'+x[1]+'<b>'+dbN(R[x[0]])+'</b></span>'; }).join('')+'</div>';
+  }
+  if(nh){ var pr=H.b+H.g;
+    h+='<div class="sec">Headcount – '+hm+'</div><div class="kpis">'+dbKpi('Present at the headcount', dbN(pr), 'boys '+dbN(H.b)+' · girls '+dbN(H.g)+(list.length>1?' · '+nh+' of '+list.length+' schools counted':'')+(last?' · last count '+dLabel(last):''))+
+      dbKpi('Attendance '+dbStat(dbP(pr,H.reg),85,70), dbPs(dbP(pr,H.reg)), 'present ÷ registered, in the grades counted')+'</div>';
+  } else if(tot) h+='<div class="dbnote">No headcount entered for '+hm+' yet.</div>';
+  return h+'</div>';
+}
+/* ---- allergies (counts only) ---- */
+function dbAlgCard(list){
+  var n=0, multi=0, by={}, ns=0;
+  list.forEach(function(s){ var a=D.d.alg[s.id]; if(!a) return; ns++; n+=a.n; multi+=a.m||0; Object.keys(a.a).forEach(function(k){ by[k]=(by[k]||0)+a.a[k]; }); });
+  if(!n) return '';
+  var k=Object.keys(by).sort(function(a,b){ return by[b]-by[a]; }).slice(0,8), mx=by[k[0]]||1;
+  return '<div class="card"><h2>Allergies and eating needs</h2><div class="kpis">'+dbKpi(D.d.algFull?'Students':'Counts', dbN(n), (list.length>1?ns+' school'+(ns>1?'s':'')+' · ':'')+(D.d.algFull?'from the allergy register':'from the Allergies tab'))+
+    dbKpi('2 or more allergies', dbN(multi), 'need an individual check of the substitute')+'</div><div class="hb">'+
+    k.map(function(x){ return '<div class="hrow"><div class="hl">'+esc(D.d.algL[x]||x)+'</div><div class="ht"><b style="width:'+(100*by[x]/mx).toFixed(1)+'%"></b></div><div class="hv">'+by[x]+'</div></div>'; }).join('')+
+    '</div><div class="dbnote">Counts only – no names. A student with two allergies is counted under both.</div></div>';
+}
+/* ---- what to follow up ---- */
+function dbFollow(list, A){
+  var items=[], P=A.per;
+  function lk(arr, f){ arr.sort(function(a,b){ return f(b)-f(a); }); var more=arr.length>10?arr.length-10:0;
+    return '<div class="lk">'+arr.slice(0,10).map(function(s){ var i=D.drill.push(['sid',s.id])-1; return '<a onclick="dbDrill('+i+')"><bdi>'+esc(s.n)+'</bdi> ('+f(s)+')</a>'; }).join('')+(more?'<span class="mini">+'+more+' more in the table</span>':'')+'</div>'; }
+  var miss=list.filter(function(s){ return dbV(P[s.id],'due')-dbV(P[s.id],'rep')>0; }), mf=function(s){ return dbV(P[s.id],'due')-dbV(P[s.id],'rep'); };
+  if(miss.length) items.push(['c','!', miss.length+' school'+(miss.length>1?'s':'')+' with '+(D.mod==='snacks'?'no distribution report':'no sandwich order')+' on a school day', miss.reduce(function(a,s){return a+mf(s);},0)+' school days in total (number of days in brackets).'+lk(miss,mf)]);
+  if(D.mod==='snacks'){
+    var od=list.filter(function(s){ return dbV(P[s.id],'od')>0; });
+    if(od.length) items.push(['w','!', od.length+' school'+(od.length>1?'s':'')+' reached more students than enrolled', 'Check the enrolment in School Info or the figures entered.'+lk(od,function(s){return dbV(P[s.id],'od');})]);
+    var dm=list.filter(function(s){ return dbV(P[s.id],'x')>0; });
+    if(dm.length) items.push(['w','!', 'Damaged or returned parcels at '+dm.length+' school'+(dm.length>1?'s':''), dbN(dbV(A.T,'x'))+' parcels.'+lk(dm,function(s){return dbV(P[s.id],'x');})]);
+  } else {
+    var lt=list.filter(function(s){ return dbV(P[s.id],'late')>0; });
+    if(lt.length) items.push(['w','!', 'Late orders at '+lt.length+' school'+(lt.length>1?'s':''), 'Sent after the cut-off.'+lk(lt,function(s){return dbV(P[s.id],'late');})]);
+    var fl=list.filter(function(s){ return dbV(P[s.id],'flag')>0; });
+    if(fl.length) items.push(['c','!', fl.length+' school'+(fl.length>1?'s':'')+' where distributed + leftover does not add up', 'Correct with Leftover (prepared and leftover) in the Kitchen tile.'+lk(fl,function(s){return dbV(P[s.id],'flag');})]);
+    var nc=list.filter(function(s){ return dbV(P[s.id],'rw')-dbV(P[s.id],'conf')>0; });
+    if(nc.length) items.push(['w','!', 'Orders not confirmed by the kitchen at '+nc.length+' school'+(nc.length>1?'s':''), 'The kitchen supervisor confirms with the menu.'+lk(nc,function(s){return dbV(P[s.id],'rw')-dbV(P[s.id],'conf');})]);
+  }
+  var h='<div class="card"><h2>To follow up</h2>';
+  if(!items.length) h+='<div class="fu"><div class="ic g">✓</div><div class="tx"><b>Nothing to follow up</b>Every school day due has its figures, with nothing out of line.</div></div>';
+  items.forEach(function(x){ h+='<div class="fu"><div class="ic '+x[0]+'">'+x[1]+'</div><div class="tx"><b>'+esc(x[2])+'</b>'+x[3]+'</div></div>'; });
+  return h+'</div>';
+}
+/* ---- table of schools ---- */
+function dbCols(){
+  var day=D.d.period==='day';
+  if(D.mod==='snacks') return [
+    ['st','Enrolled',function(s,t){return s.st;}], ['pk',day?'Reached':'Reached*',function(s,t){return dbV(t,'pk');}], ['d','Distributed',function(s,t){return dbV(t,'d');}],
+    ['cov','Coverage',function(s,t){return dbCov(t);},'%'], ['rep',day?'Report':'Reported',function(s,t){return dbRep(t).p;},'rep'], ['left','Leftover',function(s,t){return s.left;}] ];
+  return [
+    ['st','Enrolled',function(s,t){return s.st;}], ['pk',day?'Reached':'Reached*',function(s,t){return dbV(t,'pk');}], ['p','Prepared',function(s,t){return dbV(t,'p');}],
+    ['d','Distributed',function(s,t){return dbV(t,'d');}], ['l','Leftover',function(s,t){return dbV(t,'l');}], ['cov','Coverage',function(s,t){return dbCov(t);},'%'], ['rep',day?'Order':'Orders',function(s,t){return dbRep(t).p;},'rep'] ];
+}
+function dbRepCell(t){
+  var r=dbRep(t);
+  if(D.d.period!=='day') return r.d ? r.n+'/'+r.d : (r.open?'open':'–');
+  if(r.n) return '✓';
+  if(r.d) return '<b style="color:var(--crit)">✕</b> missing';
+  return r.open ? 'not yet' : '<span class="mu">no school</span>';
+}
+function dbSort(k){ if(D.sort===k) D.dir=-D.dir; else { D.sort=k; D.dir=k==='n'?1:-1; } dbRender(); }
+function dbTable(list, A){
+  var cols=dbCols(), rows=list.slice();
+  if(D.sort){ var c=cols.filter(function(x){return x[0]===D.sort;})[0];
+    rows.sort(function(a,b){ var x = D.sort==='n' ? a.n : c[2](a,A.per[a.id]), y = D.sort==='n' ? b.n : c[2](b,A.per[b.id]);
+      if(x==null) x=-1; if(y==null) y=-1; return (x<y?-1:x>y?1:0)*D.dir; }); }
+  D.rows=rows;
+  var h='<div class="card"><h2>Schools</h2><div class="tw"><table class="dt"><tr><th class="'+(D.sort==='n'?'on':'')+'" onclick="dbSort(\'n\')">School</th>'+
+    cols.map(function(c){ return '<th class="'+(D.sort===c[0]?'on':'')+'" onclick="dbSort(\''+c[0]+'\')">'+c[1]+(D.sort===c[0]?(D.dir>0?' ▲':' ▼'):'')+'</th>'; }).join('')+'</tr>';
+  rows.forEach(function(s){
+    var t=A.per[s.id], i=D.drill.push(['sid',s.id])-1;
+    h+='<tr class="cl'+(s.t==='N'&&D.mod==='snacks'?' nb':'')+'" onclick="dbDrill('+i+')"><td class="nm"><b dir="auto">'+esc(s.n)+'</b><small>'+esc(s.v)+' · '+esc(s.c)+(D.mod==='kitchen'&&s.t==='N'?' · '+esc(s.kn||''):'')+(dbV(t,'sn')?' · '+dbV(t,'sn')+' days on snacks':'')+'</small></td>'+
+      cols.map(function(c){ var v=c[2](s,t); return '<td>'+(c[3]==='rep' ? dbRepCell(t) : c[3]==='%' ? dbPs(v) : dbN(v))+'</td>'; }).join('')+'</tr>';
+  });
+  var T=A.T;
+  h+='<tr class="tt"><td>Total ('+rows.length+')</td>'+cols.map(function(c){ var v=c[2]({st:A.st,left:A.left},T); return '<td>'+(c[3]==='rep' ? (D.d.period==='day' ? dbRep(T).n+'/'+dbRep(T).d : dbPs(v)) : c[3]==='%' ? dbPs(v) : dbN(v))+'</td>'; }).join('')+'</tr>';
+  return h+'</table></div><div class="dbnote">'+(D.d.period==='day'?'':'* Reached = highest number on one day in the period. ')+'Tap a column to sort, a school to open it.'+(D.mod==='snacks'&&list.some(function(s){return s.t==='N';})?' Orange rows = nearby schools on snacks.':'')+'</div></div>';
+}
+/* ---- day by day (or week by week) table – the table view of the chart ---- */
+function dbDayTable(A){
+  var d=D.d, sn=D.mod==='snacks';
+  var cols = sn ? ['Planned','Received','Distributed','Reached','Coverage','Reported'] : ['Ordered','Prepared','Distributed','Leftover','Coverage','Orders'];
+  var h='<div class="card"><details'+(D.sid?' open':'')+'><summary class="sec" style="cursor:pointer">'+(d.unit==='week'?'Week by week':'Day by day')+' – table</summary><div class="tw"><table class="dt"><tr><th>'+(d.unit==='week'?'Week':'Day')+'</th>'+cols.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr>';
+  d.buckets.forEach(function(k,i){
+    var x=A.B[i], r=dbRep(x);
+    if(!x.some(function(v){return v;})) { h+='<tr><td>'+esc(dbBLabel(k,true))+'</td><td colspan="6" class="mu" style="text-align:left">'+(k>d.today?'not yet':'no school day')+'</td></tr>'; return; }
+    var v = sn ? [dbV(x,'p'),dbV(x,'r'),dbV(x,'d'),dbV(x,'re')] : [dbV(x,'o'),dbV(x,'p'),dbV(x,'d'),dbV(x,'l')];
+    h+='<tr><td>'+esc(dbBLabel(k,true))+'</td>'+v.map(function(z){return '<td>'+dbN(z)+'</td>';}).join('')+'<td>'+dbPs(dbCov(x))+'</td><td>'+(r.d?r.n+'/'+r.d:(r.open?'open':'–'))+'</td></tr>';
+  });
+  return h+'</table></div></details></div>';
+}
+/* ---- CSV of the table on screen ---- */
+function dbCsv(){
+  var d=D.d, A=dbAgg(dbList()), q=function(v){ v=v==null?'':String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }, L=[];
+  L.push(['SMP WFP.26 – '+(d.mod==='snacks'?'Snacks':'Kitchen sandwiches')+' – '+dbPerLabel()].map(q).join(','));
+  if(!D.sid){
+    var cols=dbCols();
+    L.push(['School ID','School','Village','District','Area','Type'].concat(cols.map(function(c){return c[1].replace('*','');})).map(q).join(','));
+    (D.rows.length?D.rows:dbList()).forEach(function(s){ var t=A.per[s.id]; if(!t) return;
+      L.push([s.id,s.n,s.v,s.c,s.a,dbTypeName(s.t)].concat(cols.map(function(c){ var v=c[2](s,t); if(c[3]==='rep'){ var r=dbRep(t); return r.n+'/'+r.d; } return c[3]==='%'?(v==null?'':v+'%'):v; })).map(q).join(','));
+    });
+  } else {
+    var sn=d.mod==='snacks';
+    L.push([d.unit==='week'?'Week':'Day'].concat(sn?['Planned','Received','Distributed','Double portions','Damaged','Reached','Coverage %','Reported','Due']:['Ordered','Prepared','Distributed','Leftover','Coverage %','Ordered days','Due']).map(q).join(','));
+    d.buckets.forEach(function(k,i){ var x=A.B[i], r=dbRep(x);
+      L.push([dbBLabel(k,true)].concat(sn?[dbV(x,'p'),dbV(x,'r'),dbV(x,'d'),dbV(x,'db'),dbV(x,'x'),dbV(x,'re'),dbCov(x),r.n,r.d]:[dbV(x,'o'),dbV(x,'p'),dbV(x,'d'),dbV(x,'l'),dbCov(x),r.n,r.d]).map(q).join(','));
+    });
+  }
+  var name='SMP_Dashboard_'+(d.mod==='snacks'?'Snacks':'Kitchens')+'_'+d.period+'_'+d.from+(D.sid?'_'+D.sid:'')+'.csv';
+  try{
+    var blob=new Blob(['﻿'+L.join('\r\n')],{type:'text/csv;charset=utf-8'}), a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
+  }catch(e){ alert('The download did not start on this device. Open the staff link in Chrome or Safari and try again.'); }
+}
+/* ---- column / line chart (SVG, no library) ---- */
+function dbDrawCharts(){
+  var el=$('dbTrend'); if(!el) return;
+  var cfg=dbTrendCfg(dbAgg(dbList()));
+  D.charts=[{el:el,cfg:cfg}];
+  dbChart(el,cfg);
+  $('dbTrendL').innerHTML = cfg.series.length>1 ? cfg.series.map(function(s){ return '<span><i class="'+(s.k==='line'?'ln':'')+'" style="background:'+s.c+'"></i>'+esc(s.n)+'</span>'; }).join('') : '';
+}
+function dbNice(v){ if(v<=0) return 1; var e=Math.pow(10,Math.floor(Math.log(v)/Math.LN10)), f=v/e; return Math.max(1,(f<=1?1:f<=2?2:f<=5?5:10)*e); }
+function dbChart(el, cfg){
+  var W=Math.max(260, el.clientWidth||320), H=200, ml=40, mr=10, mt=12, mb=24, pw=W-ml-mr, ph=H-mt-mb, n=cfg.labels.length;
+  var bars=cfg.series.filter(function(s){return s.k==='bar';}), lines=cfg.series.filter(function(s){return s.k==='line';}), mx=0;
+  for(var i=0;i<n;i++){
+    var bt=0; bars.forEach(function(s){ var v=s.v[i]||0; if(cfg.stacked) bt+=v; else bt=Math.max(bt,v); });
+    lines.forEach(function(s){ if(s.v[i]!=null) bt=Math.max(bt,s.v[i]); }); mx=Math.max(mx,bt);
+  }
+  var step = cfg.pct ? (mx>100 ? dbNice(mx/4) : 25) : dbNice((mx||1)/4), nt=Math.max(1,Math.ceil((mx||1)/step)), top=step*nt;
+  function Y(v){ return mt+ph-(v/top)*ph; }
+  var band=pw/n, bw=Math.max(2,Math.min(24, band*(cfg.stacked||bars.length<2?0.62:0.36))), s='';
+  for(var k=0;k<=nt;k++){ var v=step*k, y=Y(v).toFixed(1);
+    s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+y+'" y2="'+y+'" stroke="var(--grid)" stroke-width="1"/>';
+    s+='<text x="'+(ml-6)+'" y="'+(+y+4)+'" text-anchor="end">'+(cfg.pct?Math.round(v)+'%':dbC(v))+'</text>'; }
+  var every=Math.max(1, Math.ceil(n/Math.max(1,Math.floor(pw/46))));
+  for(i=0;i<n;i++){
+    var cx=ml+band*i+band/2;
+    if(i%every===0) s+='<text x="'+cx.toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle">'+esc(cfg.labels[i])+'</text>';
+    var base=0;
+    bars.forEach(function(se, j){
+      var v=se.v[i]||0; if(!v) return;
+      var x = cfg.stacked||bars.length<2 ? cx-bw/2 : cx-bw-1+j*(bw+2), y0=Y(cfg.stacked?base:0), y1=Y((cfg.stacked?base:0)+v);
+      if(cfg.stacked && base>0) y0-=2; // 2px surface gap between stacked segments
+      var hgt=y0-y1; if(hgt<=0){ base+=v; return; }
+      var r=Math.min(4,bw/2,hgt), topSeg = !cfg.stacked || !bars.slice(j+1).some(function(z){ return (z.v[i]||0)>0; });
+      s+= topSeg ? '<path d="M'+x.toFixed(1)+','+y0.toFixed(1)+'V'+(y1+r).toFixed(1)+'Q'+x.toFixed(1)+','+y1.toFixed(1)+' '+(x+r).toFixed(1)+','+y1.toFixed(1)+'H'+(x+bw-r).toFixed(1)+'Q'+(x+bw).toFixed(1)+','+y1.toFixed(1)+' '+(x+bw).toFixed(1)+','+(y1+r).toFixed(1)+'V'+y0.toFixed(1)+'Z" fill="'+se.c+'"/>'
+                 : '<rect x="'+x.toFixed(1)+'" y="'+y1.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hgt.toFixed(1)+'" fill="'+se.c+'"/>';
+      base+=v;
+    });
+  }
+  lines.forEach(function(se){
+    var pts=[]; se.v.forEach(function(v,i){ if(v!=null) pts.push([ml+band*i+band/2, Y(v)]); });
+    if(pts.length>1) s+='<polyline points="'+pts.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ')+'" fill="none" stroke="'+se.c+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+    if(n<=40) pts.forEach(function(p){ s+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="4" fill="'+se.c+'" stroke="#fff" stroke-width="2"/>'; });
+  });
+  s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+Y(0)+'" y2="'+Y(0)+'" stroke="#c9cfda" stroke-width="1"/>';
+  for(i=0;i<n;i++) s+='<rect class="hit" data-i="'+i+'" x="'+(ml+band*i).toFixed(1)+'" y="'+mt+'" width="'+band.toFixed(1)+'" height="'+ph+'" fill="transparent" tabindex="0"/>';
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" role="img" aria-label="'+esc(cfg.series.map(function(x){return x.n;}).join(', '))+' by '+(D.d.unit==='week'?'week':'day')+'">'+s+'</svg>';
+  Array.prototype.forEach.call(el.querySelectorAll('rect.hit'),function(r){
+    function on(e){ dbTip(e, +r.getAttribute('data-i'), cfg, r); }
+    r.addEventListener('pointerenter',on); r.addEventListener('pointermove',on); r.addEventListener('focus',on);
+    r.addEventListener('pointerleave',dbTipOff); r.addEventListener('blur',dbTipOff);
+  });
+}
+function dbTip(e, i, cfg, r){
+  var t=$('dbTip'); if(!t){ t=document.createElement('div'); t.id='dbTip'; t.className='dtip'; document.body.appendChild(t); }
+  t.innerHTML=''; var th=document.createElement('div'); th.className='th'; th.textContent=cfg.full[i]; t.appendChild(th);
+  cfg.series.forEach(function(se){ var row=document.createElement('div'); row.className='tr'; var k=document.createElement('i'); k.style.background=se.c; var b=document.createElement('b');
+    var v=se.v[i]; b.textContent = v==null ? '–' : cfg.pct ? v+'%' : dbN(v); var sp=document.createElement('span'); sp.textContent=se.n; row.appendChild(k); row.appendChild(b); row.appendChild(sp); t.appendChild(row); });
+  t.style.display='block';
+  var bx=r.getBoundingClientRect(), x=(e&&e.clientX)||bx.left+bx.width/2, w=t.offsetWidth, y=bx.top+8;
+  t.style.left=Math.max(8,Math.min(window.innerWidth-w-8, x-w/2))+'px'; t.style.top=Math.max(8, y-t.offsetHeight-6)+'px';
+}
+function dbTipOff(){ var t=$('dbTip'); if(t) t.style.display='none'; }
+window.addEventListener('scroll', dbTipOff, {passive:true});
+var dbRsz=null;
+window.addEventListener('resize', function(){ clearTimeout(dbRsz); dbRsz=setTimeout(function(){ if(!$('v-dash').classList.contains('hidden')) D.charts.forEach(function(c){ dbChart(c.el,c.cfg); }); },150); });
+
+['iSchool','pSchool','dSchool','hSchool','dbSchool'].forEach(pickInit);
 </script>
 </body>
 </html>
