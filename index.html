@@ -79,6 +79,7 @@
   .xfer{margin-top:10px;border-top:1px dashed #d0d7e2;padding-top:6px}
   .xfer summary{cursor:pointer;font-size:13px;color:#2f5597;font-weight:600;padding:4px 0}
   .xfer .row2{margin-top:6px}
+  .xadd{margin-top:8px;background:none;border:1px dashed #9db3d6;color:#2f5597;border-radius:8px;padding:6px 10px;font-size:13px;width:100%}
   .xin{margin-top:8px;font-size:13px;background:#eef4fb;border-radius:8px;padding:7px 10px}
   .bal{font-size:12px;color:var(--muted);margin-top:6px}
   table.hist{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;font-variant-numeric:tabular-nums}
@@ -1553,7 +1554,7 @@ function renderDaily(){
   });
   if(!h) h='<div class="info">No shift at this school on this day.</div>';
   $('dShifts').innerHTML=h;
-  ['AM','PM'].forEach(function(sh){ if($('dTo_'+sh)) pickInit('dTo_'+sh); });
+  S.xr={}; document.querySelectorAll('#dShifts select[id^=dTo_]').forEach(function(el){ pickInit(el.id); });
   var anyNotes=['AM','PM'].map(function(k){return r.shifts[k].notes;}).filter(String)[0]||'';
   $('dNotes').value=anyNotes; $('dNotes').disabled=!anyEdit;
   $('dBanner').innerHTML = anyEdit ? (mode==='override'?'<div class="warn">This day is closed. You are editing as '+esc(S.user.role)+' – a reason is required.</div>':'<div class="info">'+esc(openMsg)+'.</div>') : '';
@@ -1566,26 +1567,41 @@ function renderDaily(){
   if(!(r.recent||[]).length) t+='<tr><td colspan="7">No figures yet.</td></tr>';
   $('dHist').innerHTML=t;
 }
-/* v9.3 transfers: parcels sent to another school (any school on snacks that day) and parcels received from other schools */
+/* v9.3 / v9.7 transfers: parcels sent to other schools (any school on snacks that day, several allowed) and parcels received from other schools */
 function xferBox(sh,x,ed){
-  var r=S.daily, h='';
+  var h='';
   if(x.tIn) h+='<div class="xin">↘ <b>Transferred in: '+x.tIn+'</b> parcels from '+(x.tInList||[]).map(function(t){ return '<bdi>'+esc(t.name)+'</bdi> '+t.shift+' ('+t.qty+(t.by?', entered by '+esc(t.by):'')+')'; }).join(', ')+'</div>';
   if(!ed && !x.tOut) return h;
-  var tg=(r.targets||[]).filter(function(t){ return t.v!==r.school.id+'|'+sh; });
-  var opts='<option value="">No transfer</option>'+tg.map(function(t){ return '<option value="'+t.v+'" data-q="'+esc(t.monitor+' '+t.id)+'"'+(x.tTo===t.v?' selected':'')+'>'+esc(t.name)+' – '+esc(t.village)+(r.targets.some(function(o){ return o.id===t.id&&o.shift!==t.shift; })?' · '+t.shift:'')+'</option>'; }).join('');
-  if(x.tTo && !tg.some(function(t){ return t.v===x.tTo; })) opts+='<option value="'+esc(x.tTo)+'" selected>'+esc(x.tTo)+'</option>';
-  h+='<details class="xfer"'+(x.tOut?' open':'')+'><summary>Transfer parcels to another school'+(x.tOut?' · '+x.tOut+' transferred':'')+'</summary>'+
-     '<div class="row2"><div><label>Parcels transferred out</label><input type="number" inputmode="numeric" min="0" data-f="tOut" value="'+(x.tOut||'')+'" placeholder="0"'+(ed?'':' disabled')+' oninput="calc()"></div>'+
-     '<div><label>To school</label><select id="dTo_'+sh+'" data-c="tTo" data-pkall="1"'+(ed?'':' disabled')+' onchange="calc()">'+opts+'</select></div></div></details>';
+  return h+'<details class="xfer"'+(x.tOut?' open':'')+' data-xsh="'+sh+'">'+xferInner(sh,x,ed,(x.tList&&x.tList.length?x.tList:[{to:'',qty:''}]))+'</details>';
+}
+function xferInner(sh,x,ed,rows){
+  var r=S.daily, tg=(r.targets||[]).filter(function(t){ return t.v!==r.school.id+'|'+sh; }), tot=rows.reduce(function(a,t){ return a+(+t.qty||0); },0);
+  var h='<summary>Transfer parcels to other schools'+(tot?' · '+tot+' transferred':'')+'</summary>';
+  rows.forEach(function(t,i){
+    var opts='<option value="">No transfer</option>'+tg.map(function(o){ return '<option value="'+o.v+'" data-q="'+esc(o.monitor+' '+o.id)+'"'+(t.to===o.v?' selected':'')+'>'+esc(o.name)+' – '+esc(o.village)+(r.targets.some(function(z){ return z.id===o.id&&z.shift!==o.shift; })?' · '+o.shift:'')+'</option>'; }).join('');
+    if(t.to && !tg.some(function(o){ return o.v===t.to; })) opts+='<option value="'+esc(t.to)+'" selected>'+esc(t.to)+'</option>';
+    h+='<div class="row2 xrow"><div><label>Parcels'+(rows.length>1?' ('+(i+1)+')':'')+'</label><input type="number" inputmode="numeric" min="0" data-x="q" value="'+(t.qty||'')+'" placeholder="0"'+(ed?'':' disabled')+' oninput="calc()"></div>'+
+       '<div><label>To school</label><select id="dTo_'+sh+'_'+i+'" data-x="to" data-pkall="1"'+(ed?'':' disabled')+' onchange="calc()">'+opts+'</select></div></div>';
+  });
+  if(ed) h+='<button type="button" class="xadd" onclick="xferAdd(\''+sh+'\')">+ Add another school</button>';
   return h;
+}
+function xferRows(box){ return Array.prototype.map.call(box.querySelectorAll('.xrow'),function(rw){ return { qty: rw.querySelector('[data-x=q]').value, to: rw.querySelector('[data-x=to]').value }; }); }
+function xferAdd(sh){
+  var box=document.querySelector('#dShifts .shift[data-sh='+sh+']'), d=box.querySelector('.xfer'), rows=xferRows(box);
+  rows.push({to:'',qty:''});
+  d.innerHTML=xferInner(sh,S.daily.shifts[sh],true,rows); d.open=true;
+  d.querySelectorAll('select[id^=dTo_]').forEach(function(el){ pickInit(el.id); });
+  calc();
 }
 function flRow(label,f,val,dis,cls){ return '<div class="fl'+(cls?' '+cls:'')+'"><label>'+label+'</label><input type="number" inputmode="numeric" min="0" data-f="'+f+'" value="'+val+'"'+dis+(f==='dbl'||f==='helpers'||f==='thrown'?' placeholder="0"':'')+' oninput="calc()"></div>'; }
 /* v9.6: every parcel accounted for – distributed + helpers + damaged / thrown + kept + transferred out = leftover from before + received + transferred in */
 function acct(x,v){
-  var av=x.opening+(+v.received||0)+(x.tIn||0)-(+v.tOut||0), out=(+v.distributed||0)+(+v.helpers||0)+(+v.thrown||0)+(+v.kept||0);
+  var av=x.opening+(+v.received||0)+(x.tIn||0), out=(+v.distributed||0)+(+v.helpers||0)+(+v.thrown||0)+(+v.kept||0)+(+v.tOut||0);
   return { av:av, out:out, diff:av-out, ready: v.received!=='' && v.distributed!=='' && v.kept!=='' };
 }
-function vals(box){ var o={}; box.querySelectorAll('input[data-f]').forEach(function(el){ o[el.dataset.f]=el.value; }); box.querySelectorAll('[data-c]').forEach(function(el){ o[el.dataset.c]=el.value; }); o.damaged=String((+o.helpers||0)+(+o.thrown||0)); return o; }
+function vals(box){ var o={}; box.querySelectorAll('input[data-f]').forEach(function(el){ o[el.dataset.f]=el.value; }); box.querySelectorAll('[data-c]').forEach(function(el){ o[el.dataset.c]=el.value; }); o.damaged=String((+o.helpers||0)+(+o.thrown||0));
+  o.tList=xferRows(box); o.tOut=String(o.tList.reduce(function(a,t){ return a+(+t.qty||0); },0)); return o; }
 /* v9.1 plan check: distributed + leftover + damaged must equal planned + leftover from before */
 function planChk(x, v){
   if(v.distributed==='' || v.received==='') return null;
@@ -1595,7 +1611,8 @@ function planChk(x, v){
 }
 function calc(){
   document.querySelectorAll('#dShifts .shift').forEach(function(box){
-    var x=S.daily.shifts[box.dataset.sh], v=vals(box), a=acct(x,v);
+    var x=S.daily.shifts[box.dataset.sh], v=vals(box), a=acct(x,v), sm=box.querySelector('.xfer summary');
+    if(sm) sm.textContent='Transfer parcels to other schools'+(+v.tOut?' · '+v.tOut+' transferred':'');
     var dist=+v.distributed||0, dbl=+v.dbl||0, reach=dist-dbl;
     var ab=box.querySelector('.avail b'), rb=box.querySelector('.reach'), ac=box.querySelector('.acct');
     if(ab) ab.textContent = v.received===''?'–':a.av;
@@ -1606,7 +1623,7 @@ function calc(){
       ac.className='acct'+(!a.ready?'':a.diff===0?' good':' bad');
       ac.textContent = !a.ready ? (v.distributed!==''&&v.kept===''?'Count the parcels left in the storage room and enter them (0 if none).':'') :
         a.diff===0 ? '✓ All '+a.av+' parcels accounted for: '+parts+(+v.tOut?' + transferred out '+v.tOut:'')+'.' :
-        '⚠ '+Math.abs(a.diff)+' parcel'+(Math.abs(a.diff)>1?'s':'')+(a.diff>0?' not accounted for':' more than available')+': available '+a.av+', entered '+a.out+(+v.tOut?' (+ transferred out '+v.tOut+')':'')+'. Check the count.';
+        '⚠ '+Math.abs(a.diff)+' parcel'+(Math.abs(a.diff)>1?'s':'')+(a.diff>0?' not accounted for':' more than available')+': available '+a.av+', entered '+a.out+'. Check the count.';
     }
     var pc=planChk(x,v), pb=box.querySelector('.pchk'), pr=box.querySelector('.pchkR');
     if(pb){ pb.className='pchk'+(pc&&pc.bad?' bad':pc&&pc.txt?' good':''); pb.textContent = pc&&pc.txt ? (pc.bad?'⚠ Does not match the plan: ':'✓ Matches the plan: ')+pc.txt : ''; }
@@ -1622,9 +1639,10 @@ function saveDaily(){
     var v=vals(box);
     if(v.distributed===''&&!x.entered) return; // shift not reported yet – can be saved later
     if(v.received===''||v.distributed===''){ err=sh+': enter both parcels received and distributed (use 0 if none).'; return; }
-    if(!(+v.tOut>0)){ v.tOut=''; v.tTo=''; } else if(!v.tTo){ err=sh+': choose the school the '+v.tOut+' parcels were transferred to.'; return; }
+    var nt=v.tList.filter(function(t){ return +t.qty>0 && !t.to; })[0]; if(nt){ err=sh+': choose the school the '+nt.qty+' parcels were transferred to.'; return; }
+    v.tList=v.tList.filter(function(t){ return +t.qty>0; }); delete v.tTo;
     if(v.kept===''){ err=sh+': enter the parcels kept in the storage room for tomorrow (0 if none).'; return; }
-    var a=acct(x,v); if(a.diff!==0){ err=sh+': '+Math.abs(a.diff)+' parcel'+(Math.abs(a.diff)>1?'s':'')+(a.diff>0?' not accounted for':' more than available')+' – available '+a.av+', entered '+a.out+(+v.tOut?' + transferred out '+v.tOut:'')+'. Check the count.'; return; }
+    var a=acct(x,v); if(a.diff!==0){ err=sh+': '+Math.abs(a.diff)+' parcel'+(Math.abs(a.diff)>1?'s':'')+(a.diff>0?' not accounted for':' more than available')+' – available '+a.av+', entered '+a.out+'. Check the count.'; return; }
     if((+v.dbl||0)>(+v.distributed)) err=sh+': double portions cannot be more than parcels distributed.';
     if((+v.distributed)-(+v.dbl||0)>x.students) warn.push(sh+': students reached is above enrolment ('+x.students+').');
     var pc=planChk(x,v); if(pc&&pc.bad){ if(!v.chkReason){ err=sh+': the figures do not match the plan – choose a reason for the difference.'; return; } if(/^Other/.test(v.chkReason)&&!String(v.chkNote||'').trim()){ err=sh+': explain the difference in the details box.'; return; } } else { v.chkReason=''; v.chkNote=''; }
@@ -2115,7 +2133,7 @@ function dbCsv(){
 }
 /* ---- column / line chart (SVG, no library) ---- */
 function dbDrawCharts(){
-  var el=$('dbTrend'); if(!el) return;
+  var el=$('dbTrend'); if(!el || !D.d) return; // data being reloaded (e.g. Snacks ↔ Kitchens): the next render draws it
   var cfg=dbTrendCfg(dbAgg(dbList()));
   D.charts=[{el:el,cfg:cfg}];
   dbChart(el,cfg);
@@ -2177,7 +2195,7 @@ function dbTip(e, i, cfg, r){
 function dbTipOff(){ var t=$('dbTip'); if(t) t.style.display='none'; }
 window.addEventListener('scroll', dbTipOff, {passive:true});
 var dbRsz=null;
-window.addEventListener('resize', function(){ clearTimeout(dbRsz); dbRsz=setTimeout(function(){ if(!$('v-dash').classList.contains('hidden')) D.charts.forEach(function(c){ dbChart(c.el,c.cfg); }); },150); });
+window.addEventListener('resize', function(){ clearTimeout(dbRsz); dbRsz=setTimeout(function(){ if(!$('v-dash').classList.contains('hidden') && D.d) D.charts.forEach(function(c){ dbChart(c.el,c.cfg); }); },150); });
 
 ['iSchool','pSchool','dSchool','hSchool','dbSchool'].forEach(pickInit);
 </script>
