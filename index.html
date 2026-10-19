@@ -932,10 +932,10 @@ function renderKitchen(){
       var dc='';
       if(anyConf){
         if(!x.confirmed) dc = x.ordered===null?'':'<span class="mini">waiting</span>';
-        else { dc='<b'+(dOver?' class="overt"':'')+'>'+x.dist+'</b>'+(x.dbl?'<small class="lft">'+(x.dist-x.dbl)+' students + '+x.dbl+' double</small>':'')+(x.left!==null?'<small class="lft'+(x.flag?' bad':'')+'">+'+(x.left+(x.helpers||0))+' left</small>':'');
+        else { dc='<b'+(dOver?' class="overt"':'')+'>'+x.dist+'</b>'+(x.dist!=null?'<small class="lft">'+(x.dist-(x.dbl||0))+' students + '+(x.dbl||0)+' double</small>':'')+(x.left!==null?'<small class="lft'+(x.flag?' bad':'')+'">+'+(x.left+(x.helpers||0))+' left</small>':'');
           if(x.canDist) dc+='<button class="lbtn" id="kb_'+x.id+'" onclick="kLeft(\''+x.id+'\')">Double / leftover</button>'; }
       }
-      if(x.ordered!==null) tO+=pv; if(x.confirmed&&x.dist!==null) tD+=x.dist; if(x.confirmed&&x.left) tL+=x.left;
+      if(x.ordered!==null) tO+=pv; if(x.confirmed&&x.dist!==null) tD+=x.dist; if(x.confirmed&&(x.left||x.helpers)) tL+=(x.left||0)+(x.helpers||0);
       h+='<tr class="'+(x.works&&x.ordered===null?'miss':'')+'"><td class="nm">'+esc(x.name)+'<small>'+sub+'</small><small>'+kChip(x)+'</small>'+(x.alg&&x.alg.list.length&&!x.onSnacks?'<small class="algs">⚠ '+algList(x.alg)+(x.alg.multi?' · <span class="multi">'+x.alg.multi+' with 2+ allergies</span>':'')+'</small>':'')+'<small class="overmsg'+(oOver||dOver?'':' hidden')+'" id="kw_'+x.id+'">Above enrolment ('+x.students+')</small></td><td>'+oc+'</td>'+(anyConf?'<td>'+dc+'</td>':'')+'</tr>';
       if(x.canDist) h+='<tr class="sub hidden" id="ks_'+x.id+'"><td colspan="3"><div class="lbox"><div class="lhd">Ordered <b>'+x.ordered+'</b>. Change prepared only if the kitchen prepared a different number. Total distributed = prepared – leftover = students reached + double portions.</div>'+
         '<div class="lrow"><label>Prepared<input type="number" inputmode="numeric" min="0" id="kp_'+x.id+'" value="'+pv+'" oninput="kLeftCheck(\''+x.id+'\')"></label>'+
@@ -946,7 +946,8 @@ function renderKitchen(){
       if(x.pending) h+='<tr class="sub"><td colspan="'+(anyConf?3:2)+'"><div class="req">Requested by '+esc(x.pending.by)+': <b>'+(x.pending.prep!=null?'prepared '+x.pending.prep+' · ':'')+'distributed '+x.pending.value+(x.pending.dbl?' (incl. '+x.pending.dbl+' double)':'')+(x.pending.left!==null?' · leftover '+(x.pending.left+(x.pending.helpers||0)):'')+'</b> (ordered '+x.ordered+')'+(x.pending.reason?' · '+esc(x.pending.reason):'')+
         (x.canDecide?'<div class="act"><button class="btn ok2" onclick="kDecide(\''+x.id+'\',\'Approved\')">Approve</button><button class="btn no" onclick="kDecide(\''+x.id+'\',\'Rejected\')">Reject</button></div>':' – waiting for approval.')+'</div></td></tr>';
     });
-    h+='<tr class="tot"><td style="text-align:left">Total</td><td>'+tO.toLocaleString()+'</td>'+(anyConf?'<td>'+tD.toLocaleString()+(tL?'<small class="lft">+'+tL+' left</small>':'')+'</td>':'')+'</tr></table>';
+    var tB=0; k.rows.forEach(function(x){ if(x.confirmed&&x.dist!==null) tB+=x.dbl||0; });
+    h+='<tr class="tot"><td style="text-align:left">Total</td><td>'+tO.toLocaleString()+'</td>'+(anyConf?'<td>'+tD.toLocaleString()+'<small class="lft">'+(tD-tB).toLocaleString()+' students + '+tB+' double</small>'+(tL?'<small class="lft">+'+tL+' left</small>':'')+'</td>':'')+'</tr></table>';
     var canSend=k.rows.some(function(x){return x.canOrder && !(k.canConfirm && x.id===k.id);});
     if(canSend) h+='<button class="btn'+(k.canConfirm?' sec':'')+'" onclick="kSend(\''+k.id+'\')">Send to kitchen</button>';
     if(k.canConfirm && (!k.confirmed || k.waiting || k.rows.some(function(x){return x.canOrder;}))){
