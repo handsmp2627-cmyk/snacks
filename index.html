@@ -57,7 +57,7 @@
   .shift h3{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between;align-items:center}
   .shift h3 span{font-size:12px;font-weight:500;color:var(--muted)}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .calc{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .calc{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
   .calc div{background:#f6f8fb;border-radius:8px;padding:8px;text-align:center}
   .calc b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
   .calc small{font-size:11px;color:var(--muted)}
@@ -75,6 +75,8 @@
   .fl.kept b{font-size:20px;text-align:center}
   .fl.neg b{color:var(--redT)}
   .fl.tot b{text-align:center;font-size:16px;font-variant-numeric:tabular-nums}
+  .fl.dist label{font-weight:600}
+  .fl.neg label{color:var(--redT);font-weight:600}.fl.neg input{border-color:var(--redT);color:var(--redT)}
   .fl.kept label{font-weight:600}
   .acct{font-size:12px;margin-top:8px;border-radius:8px}
   .acct.good{color:#2e7d32;background:#e3f1e5;padding:7px 10px}
@@ -783,7 +785,7 @@ function applyLogin(r, uid, pin){
     $('tDash').classList.toggle('hidden', !r.user.dash);
     kBadge();
     var kr = hasK ? '• <b>Kitchen sandwiches</b>: send the number needed by <b>'+esc(r.kRules.am)+'</b> (AM)'+(r.kRules.shifts.indexOf('PM')>=0?' and <b>'+esc(r.kRules.pm)+'</b> (PM)':'')+'. You can correct it until the kitchen confirms.<br>'+
-      '• After the kitchen confirms, prepared = the order and distributed = prepared. If students got a second sandwich, sandwiches went to helpers or were left over, or the kitchen prepared a different number, press <b>Double / leftover</b> next to the school – distributed is worked out (prepared – helpers – leftover) and students reached = distributed – double portions. If nothing is entered, the day counts as all distributed with no leftover. Same day applies at once; after that the Project Officer approves.' : '';
+      '• After the kitchen confirms, prepared = the order and total distributed = prepared. If students got a second sandwich, sandwiches went to helpers or were left over, or the kitchen prepared a different number, press <b>Double / leftover</b> next to the school – total distributed = prepared – helpers – leftover, and students reached = total distributed – double portions. If nothing is entered, the day counts as all distributed with no leftover. Same day applies at once; after that the Project Officer approves.' : '';
     if(!hasSnack) $('rules').innerHTML = kr + '<br>• <b>School info</b>: working days, students with allergies, student numbers and PM changes go to your Project Officer for approval.';
     else if(kr) $('rules').innerHTML += '<br>'+kr;
     $('lPin').value='';
@@ -903,7 +905,7 @@ function renderKitchen(){
       (k.menu?' <span class="st n">'+esc(k.menu)+'</span>':'')+'</div>';
     h+='<div id="ka_'+k.id+'">'+kAltHtml(k)+'</div>';
     if(k.confirmed && k.waiting) h+='<div class="warn">'+k.waiting+' order'+(k.waiting>1?'s':'')+' came in after the kitchen confirmed'+(k.canConfirm?' – confirm again below.':'.')+'</div>';
-    h+='<table class="ktab"><tr><th>School</th><th>'+(anyConf?'Prepared':'Ordered')+'</th>'+(anyConf?'<th>Distributed</th>':'')+'</tr>';
+    h+='<table class="ktab"><tr><th>School</th><th>'+(anyConf?'Prepared':'Ordered')+'</th>'+(anyConf?'<th>Total distributed</th>':'')+'</tr>';
     var tO=0,tD=0,tL=0;
     k.rows.forEach(function(x){
       var sub=(x.type==='Kitchen'?'Kitchen school · ':'')+'enrolled '+x.students+(x.type!=='Kitchen'&&x.monitor&&x.monitor!==S.user.name?' · '+esc(x.monitor):'');
@@ -913,12 +915,12 @@ function renderKitchen(){
       var dc='';
       if(anyConf){
         if(!x.confirmed) dc = x.ordered===null?'':'<span class="mini">waiting</span>';
-        else { dc='<b'+(dOver?' class="overt"':'')+'>'+x.dist+'</b>'+(x.dbl?'<small class="lft">incl. '+x.dbl+' double</small>':'')+(x.helpers?'<small class="lft">'+x.helpers+' to helpers</small>':'')+(x.left!==null?'<small class="lft'+(x.flag?' bad':'')+'">+'+x.left+' left</small>':'');
+        else { dc='<b'+(dOver?' class="overt"':'')+'>'+x.dist+'</b>'+(x.dbl?'<small class="lft">'+(x.dist-x.dbl)+' students + '+x.dbl+' double</small>':'')+(x.helpers?'<small class="lft">'+x.helpers+' to helpers</small>':'')+(x.left!==null?'<small class="lft'+(x.flag?' bad':'')+'">+'+x.left+' left</small>':'');
           if(x.canDist) dc+='<button class="lbtn" id="kb_'+x.id+'" onclick="kLeft(\''+x.id+'\')">Double / leftover</button>'; }
       }
       if(x.ordered!==null) tO+=pv; if(x.confirmed&&x.dist!==null) tD+=x.dist; if(x.confirmed&&x.left) tL+=x.left;
       h+='<tr class="'+(x.works&&x.ordered===null?'miss':'')+'"><td class="nm">'+esc(x.name)+'<small>'+sub+'</small><small>'+kChip(x)+'</small>'+(x.alg&&x.alg.list.length&&!x.onSnacks?'<small class="algs">⚠ '+algList(x.alg)+(x.alg.multi?' · <span class="multi">'+x.alg.multi+' with 2+ allergies</span>':'')+'</small>':'')+'<small class="overmsg'+(oOver||dOver?'':' hidden')+'" id="kw_'+x.id+'">Above enrolment ('+x.students+')</small></td><td>'+oc+'</td>'+(anyConf?'<td>'+dc+'</td>':'')+'</tr>';
-      if(x.canDist) h+='<tr class="sub hidden" id="ks_'+x.id+'"><td colspan="3"><div class="lbox"><div class="lhd">Ordered <b>'+x.ordered+'</b>. Change prepared only if the kitchen prepared a different number. Distributed = prepared – given to helpers – leftover.</div>'+
+      if(x.canDist) h+='<tr class="sub hidden" id="ks_'+x.id+'"><td colspan="3"><div class="lbox"><div class="lhd">Ordered <b>'+x.ordered+'</b>. Change prepared only if the kitchen prepared a different number. Students reached + double portions = total distributed = prepared – given to helpers – leftover.</div>'+
         '<div class="lrow"><label>Prepared<input type="number" inputmode="numeric" min="0" id="kp_'+x.id+'" value="'+pv+'" oninput="kLeftCheck(\''+x.id+'\')"></label>'+
         '<label>+ Double portions<input type="number" inputmode="numeric" min="0" id="kdb_'+x.id+'" value="'+(x.dbl||'')+'" placeholder="0" oninput="kLeftCheck(\''+x.id+'\')"></label></div>'+
         '<div class="lrow"><label>Given to helpers<input type="number" inputmode="numeric" min="0" id="kh_'+x.id+'" value="'+(x.helpers||'')+'" placeholder="0" oninput="kLeftCheck(\''+x.id+'\')"></label>'+
@@ -991,7 +993,7 @@ function kLeftCheck(id){
   if(d<0){ c.className='lchk bad'; c.textContent='⚠ Leftover + given to helpers ('+((+l||0)+hp)+') is more than the number prepared ('+p+').'; return; }
   if(db>st){ c.className='lchk bad'; c.textContent='⚠ Double portions ('+db+') cannot be more than the students who got a sandwich ('+st+').'; return; }
   c.className='lchk good';
-  c.textContent='Distributed = '+p+(hp?' – helpers '+hp:'')+' – leftover '+(+l||0)+' = '+d+' → students reached '+st+(db?' + double portions '+db:'')+(+p!==x.ordered?' · prepared differs from the order ('+x.ordered+')':'');
+  c.textContent='Students reached '+st+(db?' + double portions '+db:'')+' = total distributed '+d+' (prepared '+p+(hp?' – helpers '+hp:'')+' – leftover '+(+l||0)+')'+(+p!==x.ordered?' · prepared differs from the order ('+x.ordered+')':'');
   if(w) w.classList.toggle('hidden', !(st>x.students));
 }
 function kSaveLeft(id){
@@ -1568,14 +1570,14 @@ function renderDaily(){
     else if(!ed) h+='<div class="info">'+esc(x.msg)+(x.entered?'':' · nothing was entered')+'</div>';
     var thr = x.damaged!=null ? Math.max(0,(x.damaged||0)-(x.helpers||0)) : '';
     h+='<div class="flow">'+flRow('Received from the supplier','received',rec,dis)+
-       flRow('Distributed to students (one each)','distributed',x.distributed==null?'':x.distributed-(x.dbl||0),dis)+
-       flRow('+ Double portions (second parcel)','dbl',x.dbl==null||!x.dbl?'':x.dbl,dis,'sub')+
-       '<div class="fl sub tot"><label>= Total parcels distributed</label><b class="dtot">–</b></div>'+
+       flRow('Students reached (one each)','distributed',x.distributed==null?'':x.distributed-(x.dbl||0),dis)+
+       flRow('+ Double portions','dbl',x.dbl==null||!x.dbl?'':x.dbl,dis,'sub')+
+       '<div class="fl tot dist"><label>= Total distributed</label><b class="dtot">–</b></div>'+
        flRow('Given to helpers','helpers',x.helpers||'',dis)+
        flRow('Damaged / isolated and thrown','thrown',thr||'',dis)+
        '<div class="fl kept tot"><label>= Kept in the storage room for tomorrow</label><b class="kOut">–</b></div></div>'+
        '<div class="acct"></div>'+
-       '<div class="calc"><div><small>Left in storage from before</small><b>'+x.opening+'</b></div><div class="avail"><small>Available today</small><b>–</b></div><div class="reach"><small>Students reached</small><b>–</b></div></div>'+
+       '<div class="calc"><div><small>Left in storage from before</small><b>'+x.opening+'</b></div><div class="avail"><small>Available today</small><b>–</b></div></div>'+
        '<div class="pchk"></div>'+(ed?'<div class="pchkR hidden"><label>Reason for the difference (required)</label><select data-c="chkReason"><option value="">Select a reason</option>'+(r.chkReasons||[]).map(function(t){ return '<option'+(x.chkReason&&x.chkReason.indexOf(t)===0?' selected':'')+'>'+esc(t)+'</option>'; }).join('')+'</select>'+
        '<input data-c="chkNote" placeholder="Details, e.g. supplier delivered 280 instead of 300" value="'+esc(x.chkReason&&x.chkReason.indexOf(' – ')>0?x.chkReason.substr(x.chkReason.indexOf(' – ')+3):'')+'"></div>':(x.chk?'<div class="mini">Reason given: '+esc(x.chkReason||'none')+'</div>':''))+
        xferBox(sh,x,ed)+
@@ -1591,7 +1593,7 @@ function renderDaily(){
   $('dSave').classList.toggle('hidden',!anyEdit);
   $('dSave').textContent = r.ds===S.now.ds ? "Save today's figures" : 'Save figures for '+dLabel(r.ds);
   calc();
-  var t='<tr><th>Date</th><th>Shift</th><th>Rec</th><th>Transf.</th><th>Dist</th><th>Double</th><th>Left</th></tr>';
+  var t='<tr><th>Date</th><th>Shift</th><th>Rec</th><th>Transf.</th><th>Total dist.</th><th>Double</th><th>Left</th></tr>';
   (r.recent||[]).forEach(function(x){ var tr=(x.tin?'+'+x.tin:'')+(x.tin&&x.tout?' ':'')+(x.tout?'−'+x.tout:''); t+='<tr><td>'+dLabel(x.ds)+'</td><td>'+x.shift+'</td><td>'+(x.virt?'–':x.rec)+'</td><td>'+tr+'</td><td>'+(x.virt?'–':x.dist)+'</td><td>'+(x.dbl||'')+'</td><td><b>'+x.close+'</b></td></tr>'; });
   if(!(r.recent||[]).length) t+='<tr><td colspan="7">No figures yet.</td></tr>';
   $('dHist').innerHTML=t;
@@ -1651,16 +1653,15 @@ function calc(){
     var xb=box.querySelector('.xfer'); if(xb) xb.classList.toggle('on', +v.tOut>0);
     var dist=+v.distributed||0, dbl=+v.dbl||0, reach=dist-dbl;
     var tb=box.querySelector('.dtot'); if(tb) tb.textContent = v.distributed===''?'–':dist;
-    var ab=box.querySelector('.avail b'), rb=box.querySelector('.reach'), ac=box.querySelector('.acct');
+    var ab=box.querySelector('.avail b'), ac=box.querySelector('.acct'), sr=box.querySelector('input[data-f=distributed]');
     if(ab) ab.textContent = v.received===''?'–':a.av;
-    rb.querySelector('b').textContent = v.distributed===''?'–':reach;
-    rb.classList.toggle('neg', reach>x.students);
+    if(sr) sr.parentNode.classList.toggle('neg', v.distributed!=='' && reach>x.students); // students reached above enrolment
     var kb=box.querySelector('.kOut'); if(kb){ kb.textContent = a.ready ? a.left : '–'; kb.parentNode.classList.toggle('neg', a.ready && a.left<0); }
     if(ac){
       var oneEach=dist-dbl;
       ac.className='acct'+(!a.ready?'':a.left<0?' bad':' good');
       ac.textContent = !a.ready ? '' : a.left<0 ? '⚠ '+(-a.left)+' parcel'+(a.left<-1?'s':'')+' more than available ('+a.av+'). Check the figures.' :
-        (x.opening?'Leftover from before '+x.opening+' + ':'')+'received '+(+v.received||0)+(x.tIn?' + transferred in '+x.tIn:'')+' – distributed '+oneEach+(dbl?' – double portions '+dbl:'')+(+v.helpers?' – helpers '+v.helpers:'')+(+v.thrown?' – thrown '+v.thrown:'')+(+v.tOut?' – transferred out '+v.tOut:'')+' = '+a.left+' kept for tomorrow.';
+        (x.opening?'Leftover from before '+x.opening+' + ':'')+'received '+(+v.received||0)+(x.tIn?' + transferred in '+x.tIn:'')+' – students reached '+oneEach+(dbl?' – double portions '+dbl:'')+(+v.helpers?' – helpers '+v.helpers:'')+(+v.thrown?' – thrown '+v.thrown:'')+(+v.tOut?' – transferred out '+v.tOut:'')+' = '+a.left+' kept for tomorrow.';
     }
     var pc=planChk(x,v), pb=box.querySelector('.pchk'), pr=box.querySelector('.pchkR');
     if(pb){ pb.className='pchk'+(pc&&pc.bad?' bad':pc&&pc.txt?' good':''); pb.textContent = pc&&pc.txt ? (pc.bad?'⚠ Does not match the plan: ':'✓ Matches the plan: ')+pc.txt : ''; }
@@ -1675,7 +1676,7 @@ function saveDaily(){
     if(!x.editable) return;
     var v=vals(box);
     if(v.distributed===''&&!x.entered) return; // shift not reported yet – can be saved later
-    if(v.received===''||v.distributed===''){ err=sh+': enter both parcels received and distributed (use 0 if none).'; return; }
+    if(v.received===''||v.distributed===''){ err=sh+': enter parcels received and students reached (use 0 if none).'; return; }
     var nt=v.tList.filter(function(t){ return +t.qty>0 && !t.to; })[0]; if(nt){ err=sh+': choose the school the '+nt.qty+' parcels were transferred to.'; return; }
     v.tList=v.tList.filter(function(t){ return +t.qty>0; }); delete v.tTo;
     delete v.kept; // worked out by the tool
