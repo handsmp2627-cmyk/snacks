@@ -733,6 +733,7 @@ function applyLogin(r, uid, pin){
     $('rules').innerHTML =
       '• <b>Weekly plan</b> for next week closes <b>'+esc(r.rules.planCutoff)+'</b>.<br>'+
       '• After that, only <b>'+esc(r.rules.pickup2)+'</b> can still change, on <b>'+esc(r.rules.midWeek)+'</b>, with a reason.<br>'+
+      (r.rules.late?'• <b>Until '+esc(r.rules.late.until)+'</b>: any upcoming day can still be changed until <b>'+esc(r.rules.late.time)+' the day before</b>, with a reason.<br>':'')+
       '• <b>Snacks distribution</b> figures for a day can be entered until <b>'+esc(r.rules.dailyCutoff)+(r.rules.dailyDays?' the next day':'')+'</b>. Older days are view only.<br>'+
       '• <b>School info</b>: working days (this week or permanent), students with allergies, student numbers and PM changes go to your Project Officer for approval. Ask before <b>'+esc(r.rules.planCutoff)+'</b> for next week.<br>'+
       '• Leftovers carry to the next working day unless given out as double portions.<br>'+
