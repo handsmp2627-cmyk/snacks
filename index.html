@@ -66,6 +66,9 @@
   .pchk.good{color:#2e7d32;background:#e3f1e5;padding:7px 10px}
   .pchk.bad{color:#9c0006;background:var(--red);padding:7px 10px;font-weight:600}
   .pchkR{margin-top:4px}
+  .dmgBox{margin-top:4px}
+  .dmgTxt{align-self:end;padding-bottom:10px}
+  .dHint{margin-top:4px}
   .xfer{margin-top:10px;border-top:1px dashed #d0d7e2;padding-top:6px}
   .xfer summary{cursor:pointer;font-size:13px;color:#2f5597;font-weight:600;padding:4px 0}
   .xfer .row2{margin-top:6px}
@@ -1528,11 +1531,13 @@ function renderDaily(){
     if(!x.working) h+='<div class="warn">'+esc(x.msg && !x.editable ? x.msg : 'Not a working day for this shift.')+'</div>';
     else if(!ed) h+='<div class="info">'+esc(x.msg)+(x.entered?'':' · nothing was entered')+'</div>';
     h+='<div class="row2"><div><label>Parcels received</label><input type="number" inputmode="numeric" min="0" data-f="received" value="'+rec+'"'+dis+' oninput="calc()"></div>'+
-       '<div><label>Parcels distributed</label><input type="number" inputmode="numeric" min="0" data-f="distributed" value="'+(x.distributed==null?'':x.distributed)+'"'+dis+' oninput="calc()"></div>'+
+       '<div><label>Parcels distributed to students</label><input type="number" inputmode="numeric" min="0" data-f="distributed" value="'+(x.distributed==null?'':x.distributed)+'"'+dis+' oninput="calc()"></div>'+
        '<div><label>of which double portions</label><input type="number" inputmode="numeric" min="0" data-f="dbl" value="'+(x.dbl==null?'':x.dbl)+'"'+dis+' placeholder="0" oninput="calc()"></div>'+
-       '<div><label>Damaged / returned</label><input type="number" inputmode="numeric" min="0" data-f="damaged" value="'+(x.damaged==null?'':x.damaged)+'"'+dis+' placeholder="0" oninput="calc()"></div></div>'+
+       '<div><label>Damaged / given to helpers</label><input type="number" inputmode="numeric" min="0" data-f="damaged" value="'+(x.damaged==null?'':x.damaged)+'"'+dis+' placeholder="0" oninput="calc()"></div></div>'+
+       '<div class="dmgBox hidden"><div class="row2"><div><label>of which given to helpers</label><input type="number" inputmode="numeric" min="0" data-f="helpers" value="'+(x.helpers||'')+'"'+dis+' placeholder="0" oninput="calc()"></div><div class="dmgTxt mini"></div></div></div>'+
+       '<div class="mini dHint">Double portions stay inside “distributed”. Damaged or given to helpers is not kept as leftover.</div>'+
        xferBox(sh,x,ed)+
-       '<div class="calc"><div><small>Leftover from previous day</small><b>'+x.opening+'</b></div><div class="reach"><small>Students reached</small><b>–</b></div><div class="left"><small>Leftover after today</small><b>–</b></div></div><div class="bal"></div>'+
+       '<div class="calc"><div><small>Leftover from previous day</small><b>'+x.opening+'</b></div><div class="reach"><small>Students reached</small><b>–</b></div><div class="left"><small>Kept in storage for tomorrow</small><b>–</b></div></div><div class="bal"></div>'+
        '<div class="pchk"></div>'+(ed?'<div class="pchkR hidden"><label>Reason for the difference (required)</label><select data-c="chkReason"><option value="">Select a reason</option>'+(r.chkReasons||[]).map(function(t){ return '<option'+(x.chkReason&&x.chkReason.indexOf(t)===0?' selected':'')+'>'+esc(t)+'</option>'; }).join('')+'</select>'+
        '<input data-c="chkNote" placeholder="Details, e.g. supplier delivered 280 instead of 300" value="'+esc(x.chkReason&&x.chkReason.indexOf(' – ')>0?x.chkReason.substr(x.chkReason.indexOf(' – ')+3):'')+'"></div>':(x.chk?'<div class="mini">Reason given: '+esc(x.chkReason||'none')+'</div>':''))+
        (x.history?'<div class="meta" style="margin-top:8px;white-space:pre-line">'+esc(x.history)+'</div>':'')+'</div>';
@@ -1571,7 +1576,7 @@ function planChk(x, v){
   if(v.distributed==='' || v.received==='') return null;
   var rec=+v.received||0, dist=+v.distributed||0, dmg=+v.damaged||0, ti=x.tIn||0, to=+v.tOut||0, left=x.opening+rec+ti-to-dist-dmg, acc=dist+left+dmg+to;
   if(x.planned==null) return rec>0 ? {bad:true, txt:'No plan was entered for this day – received '+rec+'.'} : {bad:false};
-  var exp=x.planned+x.opening+ti, a='Distributed '+dist+' + leftover '+left+(dmg?' + damaged '+dmg:'')+(to?' + transferred out '+to:'')+' = '+acc, b='planned '+x.planned+(x.opening?' + leftover from before '+x.opening:'')+(ti?' + transferred in '+ti:'');
+  var exp=x.planned+x.opening+ti, a='Distributed '+dist+' + kept in storage '+left+(dmg?' + damaged / to helpers '+dmg:'')+(to?' + transferred out '+to:'')+' = '+acc, b='planned '+x.planned+(x.opening?' + leftover from before '+x.opening:'')+(ti?' + transferred in '+ti:'');
   return acc===exp ? {bad:false, txt:a+' = '+b+'.'} : {bad:true, txt:a+', but '+b+' = '+exp+' ('+(acc>exp?'+':'')+(acc-exp)+').'};
 }
 function calc(){
@@ -1579,7 +1584,10 @@ function calc(){
     var x=S.daily.shifts[box.dataset.sh], v=vals(box);
     var rec=+v.received||0, dist=+v.distributed||0, dbl=+v.dbl||0, dmg=+v.damaged||0, ti=x.tIn||0, to=+v.tOut||0;
     var left=x.opening+rec+ti-to-dist-dmg, reach=dist-dbl;
-    var bb=box.querySelector('.bal'); if(bb) bb.textContent = v.distributed==='' || !(ti||to) ? '' : (x.opening?'Leftover from before '+x.opening+' + ':'')+'received '+rec+(ti?' + transferred in '+ti:'')+' = distributed '+dist+(dmg?' + damaged '+dmg:'')+(to?' + transferred out '+to:'')+' + leftover '+left;
+    var hp=+v.helpers||0, db=box.querySelector('.dmgBox'), dt=box.querySelector('.dmgTxt');
+    if(db) db.classList.toggle('hidden', !(dmg>0 || hp>0));
+    if(dt) dt.textContent = dmg>0 ? (hp>dmg ? 'Given to helpers cannot be more than '+dmg+'.' : 'Given to helpers '+hp+' · damaged / isolated and thrown '+(dmg-hp)) : '';
+    var bb=box.querySelector('.bal'); if(bb) bb.textContent = v.distributed==='' || !(ti||to||dmg) ? '' : (x.opening?'Leftover from before '+x.opening+' + ':'')+'received '+rec+(ti?' + transferred in '+ti:'')+' = distributed '+dist+(dmg?' + damaged / to helpers '+dmg:'')+(to?' + transferred out '+to:'')+' + kept in storage '+left;
     var lb=box.querySelector('.left'), rb=box.querySelector('.reach');
     lb.querySelector('b').textContent = v.distributed===''?'–':left;
     lb.classList.toggle('neg', left<0);
@@ -1601,7 +1609,8 @@ function saveDaily(){
     if(v.received===''||v.distributed===''){ err=sh+': enter both parcels received and distributed (use 0 if none).'; return; }
     if(!(+v.tOut>0)){ v.tOut=''; v.tTo=''; } else if(!v.tTo){ err=sh+': choose the school the '+v.tOut+' parcels were transferred to.'; return; }
     var left=x.opening+(+v.received)+(x.tIn||0)-(+v.tOut||0)-(+v.distributed)-(+v.damaged||0);
-    if(left<0) err=sh+': distributed + damaged'+(+v.tOut?' + transferred out':'')+' is more than what was available ('+(x.opening+(+v.received)+(x.tIn||0))+').';
+    if(left<0) err=sh+': distributed + damaged / to helpers'+(+v.tOut?' + transferred out':'')+' is more than what was available ('+(x.opening+(+v.received)+(x.tIn||0))+').';
+    if(!(+v.damaged>0)) v.helpers=''; else if((+v.helpers||0)>(+v.damaged)) err=sh+': given to helpers cannot be more than damaged / given to helpers ('+v.damaged+').';
     if((+v.dbl||0)>(+v.distributed)) err=sh+': double portions cannot be more than parcels distributed.';
     if((+v.distributed)-(+v.dbl||0)>x.students) warn.push(sh+': students reached is above enrolment ('+x.students+').');
     var pc=planChk(x,v); if(pc&&pc.bad){ if(!v.chkReason){ err=sh+': the figures do not match the plan – choose a reason for the difference.'; return; } if(/^Other/.test(v.chkReason)&&!String(v.chkNote||'').trim()){ err=sh+': explain the difference in the details box.'; return; } } else { v.chkReason=''; v.chkNote=''; }
@@ -1875,7 +1884,7 @@ function dbKpis(A){
     h+=dbKpi('Parcels distributed', dbN(dbV(T,'d')), dbV(T,'db') ? 'incl. '+dbN(dbV(T,'db'))+' double portions' : 'received '+dbN(dbV(T,'r')));
     h+=dbKpi('Received vs planned', dbPs(dbP(dbV(T,'r'),pp)), 'received '+dbN(dbV(T,'r'))+' of '+dbN(pp)+' planned'+(p>pp?' · '+dbN(p-pp)+' more planned after today':''));
     h+=dbKpi('Leftover in schools', dbN(A.left), 'parcels in the school stores '+(D.d.to<D.d.today?'at the end of the period':'now'));
-    h+=dbKpi('Damaged / returned', dbN(dbV(T,'x')), dbV(T,'od') ? dbV(T,'od')+' school day'+(dbV(T,'od')>1?'s':'')+' above enrolment' : 'no day above enrolment');
+    h+=dbKpi('Damaged / to helpers', dbN(dbV(T,'x')), (dbF('hp')>=0 && dbV(T,'x') ? 'to helpers '+dbN(dbV(T,'hp'))+' · damaged '+dbN(dbV(T,'x')-dbV(T,'hp'))+' · ' : '')+(dbV(T,'od') ? dbV(T,'od')+' school day'+(dbV(T,'od')>1?'s':'')+' above enrolment' : 'no day above enrolment'));
   } else {
     var kp=dbV(T,'pk'), prep=dbV(T,'p'), conf=dbV(T,'conf');
     h+=dbKpi('Students reached', dbN(kp), (day?'on this day':D.sid?'highest number of sandwiches given on one day':'highest number of sandwiches given on one day, per school, added up')+' · '+dbPs(dbP(kp,A.st))+' of '+dbN(A.st)+' enrolled', true);
@@ -2004,7 +2013,7 @@ function dbFollow(list, A){
     var mm=list.filter(function(s){ return dbV(P[s.id],'mm')>0; });
     if(mm.length){ var mn=mm.reduce(function(a,s){return a+dbV(P[s.id],'mn');},0); items.push([mn?'c':'w','!', 'Received ≠ planned at '+mm.length+' school'+(mm.length>1?'s':''), mm.reduce(function(a,s){return a+dbV(P[s.id],'mm');},0)+' school days'+(mn?', '+mn+' without a reason':', all with a reason')+' (reasons in the Snacks Distribution tab notes).'+lk(mm,function(s){return dbV(P[s.id],'mm');})]); }
     var dm=list.filter(function(s){ return dbV(P[s.id],'x')>0; });
-    if(dm.length) items.push(['w','!', 'Damaged or returned parcels at '+dm.length+' school'+(dm.length>1?'s':''), dbN(dbV(A.T,'x'))+' parcels.'+lk(dm,function(s){return dbV(P[s.id],'x');})]);
+    if(dm.length) items.push(['w','!', 'Damaged or given to helpers at '+dm.length+' school'+(dm.length>1?'s':''), dbN(dbV(A.T,'x'))+' parcels.'+lk(dm,function(s){return dbV(P[s.id],'x');})]);
   } else {
     var lt=list.filter(function(s){ return dbV(P[s.id],'late')>0; });
     if(lt.length) items.push(['w','!', 'Late orders at '+lt.length+' school'+(lt.length>1?'s':''), 'Sent after the cut-off.'+lk(lt,function(s){return dbV(P[s.id],'late');})]);
@@ -2078,7 +2087,7 @@ function dbCsv(){
     });
   } else {
     var sn=d.mod==='snacks';
-    L.push([d.unit==='week'?'Week':'Day'].concat(sn?['Planned','Received','Distributed','Double portions','Damaged','Reached','Coverage %','Reported','Due']:['Ordered','Prepared','Distributed','Leftover','Coverage %','Ordered days','Due']).map(q).join(','));
+    L.push([d.unit==='week'?'Week':'Day'].concat(sn?['Planned','Received','Distributed','Double portions','Damaged / to helpers','Reached','Coverage %','Reported','Due']:['Ordered','Prepared','Distributed','Leftover','Coverage %','Ordered days','Due']).map(q).join(','));
     d.buckets.forEach(function(k,i){ var x=A.B[i], r=dbRep(x);
       L.push([dbBLabel(k,true)].concat(sn?[dbV(x,'p'),dbV(x,'r'),dbV(x,'d'),dbV(x,'db'),dbV(x,'x'),dbV(x,'re'),dbCov(x),r.n,r.d]:[dbV(x,'o'),dbV(x,'p'),dbV(x,'d'),dbV(x,'l'),dbCov(x),r.n,r.d]).map(q).join(','));
     });
