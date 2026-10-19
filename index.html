@@ -800,12 +800,14 @@ function modBox(s){
 /* ---------- allergies and eating needs (counts per school, v7.8) ---------- */
 function algList(a){ return (a&&a.list||[]).map(function(x){ return esc(x.l)+' '+x.n; }).join(' · '); }
 function algBox(s, shifts, extra){
-  var h='';
+  var h='', dia=0;
   (shifts||['AM']).forEach(function(sh){
     var a=s.alg&&s.alg[sh]; if(!a||(!a.list.length&&!a.other)) return;
+    if(a.list.some(function(x){ return x.k==='Diabetes'; })) dia=1;
     h+='<div>'+(shifts.length>1?'<b>'+sh+'</b>: ':'')+algList(a)+(a.other?(a.list.length?' · ':'')+esc(a.other):'')+'</div>'+
       (a.multi?'<div class="multi">⚠ '+a.multi+' student'+(a.multi>1?'s':'')+' with 2 or more allergies – check each substitute is safe for them</div>':'');
   });
+  if(h&&dia) h+='<div class="multi">Diabetes: no baked item (kaak, brioche…). On baked days give these students the substitute packed for them (e.g. peanuts + apple), never the baked item.</div>';
   return h?'<div class="algbox">⚠ <b>Allergies / eating needs (students)</b>'+h+(extra?'<div class="mini">'+extra+'</div>':'')+'</div>':'';
 }
 /* ---------- kitchen sandwiches ---------- */
