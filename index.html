@@ -81,6 +81,13 @@
   .acct{font-size:12px;margin-top:8px;border-radius:8px}
   .acct.good{color:#2e7d32;background:#e3f1e5;padding:7px 10px}
   .acct.bad{color:#9c0006;background:var(--red);padding:7px 10px;font-weight:600}
+  .acct.wait{color:var(--muted)}
+  .blk{border:1px solid #e3e8f0;border-radius:10px;padding:8px 10px 10px;margin-top:10px}
+  .blk .bh{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px}
+  .fl.ro b{text-align:center;font-size:16px;font-variant-numeric:tabular-nums;background:#f6f8fb;border-radius:8px;padding:8px 0}
+  .fl.xr b{background:#efe8fb;color:#5b3b8e}
+  .blk .xtab{margin:8px 0 4px}
+  #dSave.blocked{background:#b8c2d3}
   .xfer{margin-top:10px;border-top:1px dashed #d0d7e2;padding-top:6px}
   .xfer{border:2px solid #d48aa8;background:#fbf0f4;border-radius:10px;padding:10px;margin-top:10px}
   .xfer.on{background:#f7e1ea}
@@ -1580,18 +1587,25 @@ function renderDaily(){
     if(!x.working) h+='<div class="warn">'+esc(x.msg && !x.editable ? x.msg : 'Not a working day for this shift.')+'</div>';
     else if(!ed) h+='<div class="info">'+esc(x.msg)+(x.entered?'':' · nothing was entered')+'</div>';
     var thr = x.damaged!=null ? Math.max(0,(x.damaged||0)-(x.helpers||0)) : '';
-    h+='<div class="flow">'+flRow('Received from the supplier','received',rec,dis)+
-       flRow('Students reached (one each)','distributed',x.distributed==null?'':x.distributed-(x.dbl||0),dis)+
+    /* v9.12: two blocks – In (with transfers first) and Out; saving needs in = out, with the storage room counted */
+    h+='<div class="blk"><div class="bh">In – what you had today</div>'+
+       '<div class="fl ro"><label>Left in storage from yesterday</label><b>'+x.opening+'</b></div>'+
+       flRow('Received from the supplier','received',rec,dis)+
+       xferBox(sh,x,ed)+
+       (x.tIn?'<div class="fl ro xr"><label>+ Received from other schools</label><b>'+x.tIn+'</b></div>':'')+
+       '<div class="fl ro xr tor hidden"><label>– Sent to other schools</label><b class="toutRo">0</b></div>'+
+       '<div class="fl tot"><label>= Available to distribute</label><b class="avOut">–</b></div></div>'+
+       '<div class="blk"><div class="bh">Out – where every parcel went</div>'+
+       flRow('Students reached','distributed',x.distributed==null?'':x.distributed-(x.dbl||0),dis)+
        flRow('+ Double portions','dbl',x.dbl==null||!x.dbl?'':x.dbl,dis,'sub')+
        '<div class="fl tot dist"><label>= Total distributed</label><b class="dtot">–</b></div>'+
+       flRow('Left in storage now (count it)','kept',x.kept==null?'':x.kept,dis)+
        flRow('Given to helpers','helpers',x.helpers||'',dis)+
-       flRow('Damaged / isolated and thrown','thrown',thr||'',dis)+
-       '<div class="fl kept tot"><label>= Kept in the storage room for tomorrow</label><b class="kOut">–</b></div></div>'+
+       flRow('Damaged / thrown','thrown',thr||'',dis)+
+       '<div class="fl tot"><label>= Total accounted for</label><b class="outT">–</b></div></div>'+
        '<div class="acct"></div>'+
-       '<div class="calc"><div><small>Left in storage from before</small><b>'+x.opening+'</b></div><div class="avail"><small>Available today</small><b>–</b></div></div>'+
        '<div class="pchk"></div>'+(ed?'<div class="pchkR hidden"><label>Reason for the difference (required)</label><select data-c="chkReason"><option value="">Select a reason</option>'+(r.chkReasons||[]).map(function(t){ return '<option'+(x.chkReason&&x.chkReason.indexOf(t)===0?' selected':'')+'>'+esc(t)+'</option>'; }).join('')+'</select>'+
        '<input data-c="chkNote" placeholder="Details, e.g. supplier delivered 280 instead of 300" value="'+esc(x.chkReason&&x.chkReason.indexOf(' – ')>0?x.chkReason.substr(x.chkReason.indexOf(' – ')+3):'')+'"></div>':(x.chk?'<div class="mini">Reason given: '+esc(x.chkReason||'none')+'</div>':''))+
-       xferBox(sh,x,ed)+
        (x.history?'<div class="meta" style="margin-top:8px;white-space:pre-line">'+esc(x.history)+'</div>':'')+'</div>';
   });
   if(!h) h='<div class="info">No shift at this school on this day.</div>';
@@ -1612,18 +1626,18 @@ function renderDaily(){
 /* v9.3 / v9.7 transfers: parcels sent to other schools (any school on snacks that day, several allowed) and parcels received from other schools */
 function xferBox(sh,x,ed){
   if(!x.tIn && !ed && !x.tOut) return '';
-  return '<details class="xtab"><summary>⇄ Transfers <span class="xsum">'+xferSum(x.tIn,x.tOut)+'</span></summary><div class="xbody">'+xferBody(sh,x,ed)+'</div></details>';
+  return '<details class="xtab"><summary>⇄ Transfer parcels <span class="xsum">'+xferSum(x.tIn,x.tOut)+'</span></summary><div class="xbody">'+xferBody(sh,x,ed)+'</div></details>';
 }
-function xferSum(tin,tout){ var b=[]; if(+tin) b.push('↘ '+tin+' in'); if(+tout) b.push('↗ '+tout+' out'); return b.length?b.join(' · '):'none – tap to open'; }
+function xferSum(tin,tout){ var b=[]; if(+tin) b.push('↘ '+tin+' in'); if(+tout) b.push('↗ '+tout+' out'); return b.length?b.join(' · '):'tap if parcels went to another school'; }
 function xferBody(sh,x,ed){
   var h='';
-  if(x.tIn) h+='<div class="xin"><div class="xh">↘ Received from other schools: <b>'+x.tIn+'</b> parcels</div>'+(x.tInList||[]).map(function(t){ return '<div class="xl"><bdi>'+esc(t.name)+'</bdi> '+t.shift+' · <b>'+t.qty+'</b>'+(t.by?' <span class="mu">(entered by '+esc(t.by)+')</span>':'')+'</div>'; }).join('')+'<div class="mini">Count them in what you distribute today.</div></div>';
+  if(x.tIn) h+='<div class="xin"><div class="xh">↘ Received from other schools: <b>'+x.tIn+'</b> parcels</div>'+(x.tInList||[]).map(function(t){ return '<div class="xl"><bdi>'+esc(t.name)+'</bdi> '+t.shift+' · <b>'+t.qty+'</b>'+(t.by?' <span class="mu">(entered by '+esc(t.by)+')</span>':'')+'</div>'; }).join('')+'<div class="mini">Already added to "Available to distribute".</div></div>';
   if(!ed && !x.tOut) return h;
   return h+'<div class="xfer" data-xsh="'+sh+'">'+xferInner(sh,x,ed,(x.tList&&x.tList.length?x.tList:[{to:'',qty:''}]))+'</div>';
 }
 function xferInner(sh,x,ed,rows){
   var r=S.daily, tg=(r.targets||[]).filter(function(t){ return t.v!==r.school.id+'|'+sh; }), tot=rows.reduce(function(a,t){ return a+(+t.qty||0); },0);
-  var h='<div class="xh">↗ Sent to other schools <b class="xt">'+(tot?tot+' parcels':'')+'</b></div><div class="mini xs">Only if parcels went to another school today.</div>';
+  var h='<div class="xh">↗ Sent to other schools <b class="xt">'+(tot?tot+' parcels':'')+'</b></div><div class="mini xs">Enter transfers first – the rest of the form uses what is left.</div>';
   rows.forEach(function(t,i){
     var opts='<option value="">No transfer</option>'+tg.map(function(o){ return '<option value="'+o.v+'" data-q="'+esc(o.monitor+' '+o.id)+'"'+(t.to===o.v?' selected':'')+'>'+esc(o.name)+' – '+esc(o.village)+(r.targets.some(function(z){ return z.id===o.id&&z.shift!==o.shift; })?' · '+o.shift:'')+'</option>'; }).join('');
     if(t.to && !tg.some(function(o){ return o.v===t.to; })) opts+='<option value="'+esc(t.to)+'" selected>'+esc(t.to)+'</option>';
@@ -1641,11 +1655,11 @@ function xferAdd(sh){
   d.querySelectorAll('select[id^=dTo_]').forEach(function(el){ pickInit(el.id); });
   calc();
 }
-function flRow(label,f,val,dis,cls){ return '<div class="fl'+(cls?' '+cls:'')+'"><label>'+label+'</label><input type="number" inputmode="numeric" min="0" data-f="'+f+'" value="'+val+'"'+dis+(f==='dbl'||f==='helpers'||f==='thrown'?' placeholder="0"':'')+' oninput="calc()"></div>'; }
+function flRow(label,f,val,dis,cls){ return '<div class="fl'+(cls?' '+cls:'')+'"><label>'+label+'</label><input type="number" inputmode="numeric" min="0" data-f="'+f+'" value="'+val+'"'+dis+(f==='dbl'||f==='helpers'||f==='thrown'?' placeholder="0"':f==='kept'?' placeholder="count"':'')+' oninput="calc()"></div>'; }
 /* v9.6: every parcel accounted for – distributed + helpers + damaged / thrown + kept + transferred out = leftover from before + received + transferred in */
-function acct(x,v){ // v9.8: what is left for tomorrow = leftover from before + received + transferred in – everything that went out
-  var av=x.opening+(+v.received||0)+(x.tIn||0), out=(+v.distributed||0)+(+v.helpers||0)+(+v.thrown||0)+(+v.tOut||0);
-  return { av:av, out:out, left:av-out, ready: v.received!=='' && v.distributed!=='' };
+function acct(x,v){ // v9.12: available = left from yesterday + received + transferred in – transferred out; must equal distributed + kept (counted) + helpers + thrown
+  var av=x.opening+(+v.received||0)+(x.tIn||0)-(+v.tOut||0), out=(+v.distributed||0)+(+v.kept||0)+(+v.helpers||0)+(+v.thrown||0);
+  return { av:av, out:out, diff:av-out, left:av-out, ready: v.received!=='' && v.distributed!=='' && v.kept!=='' };
 }
 function vals(box){ var o={}; box.querySelectorAll('input[data-f]').forEach(function(el){ o[el.dataset.f]=el.value; }); box.querySelectorAll('[data-c]').forEach(function(el){ o[el.dataset.c]=el.value; }); o.damaged=String((+o.helpers||0)+(+o.thrown||0)); if(o.distributed!=='') o.distributed=String((+o.distributed||0)+(+o.dbl||0));
   o.tList=xferRows(box); o.tOut=String(o.tList.reduce(function(a,t){ return a+(+t.qty||0); },0)); return o; }
@@ -1662,22 +1676,24 @@ function calc(){
     if(sm) sm.textContent = +v.tOut ? v.tOut+' parcels' : '';
     var xs=box.querySelector('.xtab .xsum'); if(xs) xs.textContent=xferSum(x.tIn,v.tOut);
     var xb=box.querySelector('.xfer'); if(xb) xb.classList.toggle('on', +v.tOut>0);
+    var tr=box.querySelector('.tor'); if(tr){ tr.classList.toggle('hidden', !(+v.tOut>0)); tr.querySelector('b').textContent=+v.tOut||0; }
     var dist=+v.distributed||0, dbl=+v.dbl||0, reach=dist-dbl;
     var tb=box.querySelector('.dtot'); if(tb) tb.textContent = v.distributed===''?'–':dist;
-    var ab=box.querySelector('.avail b'), ac=box.querySelector('.acct'), sr=box.querySelector('input[data-f=distributed]');
-    if(ab) ab.textContent = v.received===''?'–':a.av;
-    if(sr) sr.parentNode.classList.toggle('neg', v.distributed!=='' && reach>x.students); // students reached above enrolment
-    var kb=box.querySelector('.kOut'); if(kb){ kb.textContent = a.ready ? a.left : '–'; kb.parentNode.classList.toggle('neg', a.ready && a.left<0); }
+    var ab=box.querySelector('.avOut'); if(ab){ ab.textContent = v.received===''?'–':a.av; ab.parentNode.classList.toggle('neg', v.received!=='' && a.av<0); }
+    var ot=box.querySelector('.outT'); if(ot) ot.textContent = v.distributed===''&&v.kept===''?'–':a.out;
+    var sr=box.querySelector('input[data-f=distributed]'); if(sr) sr.parentNode.classList.toggle('neg', v.distributed!=='' && reach>x.students); // students reached above enrolment
+    var ac=box.querySelector('.acct');
     if(ac){
-      var oneEach=dist-dbl;
-      ac.className='acct'+(!a.ready?'':a.left<0?' bad':' good');
-      ac.textContent = !a.ready ? '' : a.left<0 ? '⚠ '+(-a.left)+' parcel'+(a.left<-1?'s':'')+' more than available ('+a.av+'). Check the figures.' :
-        (x.opening?'Leftover from before '+x.opening+' + ':'')+'received '+(+v.received||0)+(x.tIn?' + transferred in '+x.tIn:'')+' – students reached '+oneEach+(dbl?' – double portions '+dbl:'')+(+v.helpers?' – helpers '+v.helpers:'')+(+v.thrown?' – thrown '+v.thrown:'')+(+v.tOut?' – transferred out '+v.tOut:'')+' = '+a.left+' kept for tomorrow.';
+      if(!a.ready){ ac.className='acct wait'; ac.textContent = v.received==='' ? '' : 'Fill students reached and count the storage room – the page checks that every parcel is accounted for.'; }
+      else if(a.diff===0){ ac.className='acct good'; ac.textContent='✓ Available '+a.av+' = accounted for '+a.out+'. Every parcel accounted for.'; }
+      else { ac.className='acct bad'; ac.textContent='⚠ '+(a.diff>0? a.diff+' parcel'+(a.diff>1?'s':'')+' not accounted for' : (-a.diff)+' parcel'+(a.diff<-1?'s':'')+' more than available')+' (available '+a.av+', accounted for '+a.out+'). Count again before saving.'; }
     }
     var pc=planChk(x,v), pb=box.querySelector('.pchk'), pr=box.querySelector('.pchkR');
     if(pb){ pb.className='pchk'+(pc&&pc.bad?' bad':pc&&pc.txt?' good':''); pb.textContent = pc&&pc.txt ? (pc.bad?'⚠ Does not match the plan: ':'✓ Matches the plan: ')+pc.txt : ''; }
     if(pr) pr.classList.toggle('hidden', !(pc&&pc.bad));
   });
+  var bad=Array.prototype.some.call(document.querySelectorAll('#dShifts .acct'),function(e){ return e.classList.contains('bad'); });
+  var sv=$('dSave'); if(sv) sv.classList.toggle('blocked', bad);
 }
 function saveDaily(){
   show($('dErr'),''); show($('dOk'),'');
@@ -1688,10 +1704,10 @@ function saveDaily(){
     var v=vals(box);
     if(v.distributed===''&&!x.entered) return; // shift not reported yet – can be saved later
     if(v.received===''||v.distributed===''){ err=sh+': enter parcels received and students reached (use 0 if none).'; return; }
+    if(v.kept===''){ err=sh+': count the parcels left in the storage room and enter the number (0 if none).'; return; }
     var nt=v.tList.filter(function(t){ return +t.qty>0 && !t.to; })[0]; if(nt){ err=sh+': choose the school the '+nt.qty+' parcels were transferred to.'; return; }
     v.tList=v.tList.filter(function(t){ return +t.qty>0; }); delete v.tTo;
-    delete v.kept; // worked out by the tool
-    var a=acct(x,v); if(a.left<0){ err=sh+': '+(-a.left)+' parcel'+(a.left<-1?'s':'')+' more than available ('+a.av+') – check the figures.'; return; }
+    var a=acct(x,v); if(a.diff!==0){ err=sh+': '+(a.diff>0? a.diff+' parcel'+(a.diff>1?'s':'')+' not accounted for' : (-a.diff)+' parcel'+(a.diff<-1?'s':'')+' more than available')+' – available '+a.av+', accounted for '+a.out+'. Count again.'; return; }
     if((+v.dbl||0)>(+v.distributed)-(+v.dbl||0)) err=sh+': double portions cannot be more than the students who got a snack.';
     if((+v.distributed)-(+v.dbl||0)>x.students) warn.push(sh+': students reached is above enrolment ('+x.students+').');
     var pc=planChk(x,v); if(pc&&pc.bad){ if(!v.chkReason){ err=sh+': the figures do not match the plan – choose a reason for the difference.'; return; } if(/^Other/.test(v.chkReason)&&!String(v.chkNote||'').trim()){ err=sh+': explain the difference in the details box.'; return; } } else { v.chkReason=''; v.chkNote=''; }
