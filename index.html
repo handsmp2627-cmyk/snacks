@@ -1685,7 +1685,10 @@ function calc(){
     var sr=box.querySelector('input[data-f=distributed]'); if(sr) sr.parentNode.classList.toggle('neg', v.distributed!=='' && reach>x.students); // students reached above enrolment
     var ac=box.querySelector('.acct');
     if(ac){
-      if(!a.ready){ ac.className='acct wait'; ac.textContent = v.received==='' ? '' : 'Fill students reached and count the storage room – the page checks that every parcel is accounted for.'; }
+      var started = v.distributed!=='' || v.kept!=='' || v.helpers!=='' || v.thrown!=='' || v.dbl!=='';
+      if(v.received==='' && !started){ ac.className='acct wait'; ac.textContent=''; }
+      else if(a.diff<0){ ac.className='acct bad'; ac.textContent='⚠ '+(-a.diff)+' parcel'+(a.diff<-1?'s':'')+' more than available (available '+a.av+', entered so far '+a.out+'). Check the figures.'; } // v9.12c: flagged at once, before the count is entered
+      else if(!a.ready){ ac.className='acct wait'; ac.textContent = a.diff+' parcel'+(a.diff===1?'':'s')+' still to account for – fill students reached and count the storage room.'; }
       else if(a.diff===0){ ac.className='acct good'; ac.textContent='✓ Available '+a.av+' = accounted for '+a.out+'. Every parcel accounted for.'; }
       else { ac.className='acct bad'; ac.textContent='⚠ '+(a.diff>0? a.diff+' parcel'+(a.diff>1?'s':'')+' not accounted for' : (-a.diff)+' parcel'+(a.diff<-1?'s':'')+' more than available')+' (available '+a.av+', accounted for '+a.out+'). Count again before saving.'; }
     }
