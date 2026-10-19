@@ -66,6 +66,11 @@
   .pchk.good{color:#2e7d32;background:#e3f1e5;padding:7px 10px}
   .pchk.bad{color:#9c0006;background:var(--red);padding:7px 10px;font-weight:600}
   .pchkR{margin-top:4px}
+  .xfer{margin-top:10px;border-top:1px dashed #d0d7e2;padding-top:6px}
+  .xfer summary{cursor:pointer;font-size:13px;color:#2f5597;font-weight:600;padding:4px 0}
+  .xfer .row2{margin-top:6px}
+  .xin{margin-top:8px;font-size:13px;background:#eef4fb;border-radius:8px;padding:7px 10px}
+  .bal{font-size:12px;color:var(--muted);margin-top:6px}
   table.hist{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;font-variant-numeric:tabular-nums}
   .hist th,.hist td{border-bottom:1px solid var(--line);padding:6px 4px;text-align:center}
   .hist th{color:var(--muted);font-weight:600;font-size:12px}
@@ -1525,13 +1530,15 @@ function renderDaily(){
        '<div><label>Parcels distributed</label><input type="number" inputmode="numeric" min="0" data-f="distributed" value="'+(x.distributed==null?'':x.distributed)+'"'+dis+' oninput="calc()"></div>'+
        '<div><label>of which double portions</label><input type="number" inputmode="numeric" min="0" data-f="dbl" value="'+(x.dbl==null?'':x.dbl)+'"'+dis+' placeholder="0" oninput="calc()"></div>'+
        '<div><label>Damaged / returned</label><input type="number" inputmode="numeric" min="0" data-f="damaged" value="'+(x.damaged==null?'':x.damaged)+'"'+dis+' placeholder="0" oninput="calc()"></div></div>'+
-       '<div class="calc"><div><small>Leftover from previous day</small><b>'+x.opening+'</b></div><div class="reach"><small>Students reached</small><b>–</b></div><div class="left"><small>Leftover after today</small><b>–</b></div></div>'+
+       xferBox(sh,x,ed)+
+       '<div class="calc"><div><small>Leftover from previous day</small><b>'+x.opening+'</b></div><div class="reach"><small>Students reached</small><b>–</b></div><div class="left"><small>Leftover after today</small><b>–</b></div></div><div class="bal"></div>'+
        '<div class="pchk"></div>'+(ed?'<div class="pchkR hidden"><label>Reason for the difference (required)</label><select data-c="chkReason"><option value="">Select a reason</option>'+(r.chkReasons||[]).map(function(t){ return '<option'+(x.chkReason&&x.chkReason.indexOf(t)===0?' selected':'')+'>'+esc(t)+'</option>'; }).join('')+'</select>'+
        '<input data-c="chkNote" placeholder="Details, e.g. supplier delivered 280 instead of 300" value="'+esc(x.chkReason&&x.chkReason.indexOf(' – ')>0?x.chkReason.substr(x.chkReason.indexOf(' – ')+3):'')+'"></div>':(x.chk?'<div class="mini">Reason given: '+esc(x.chkReason||'none')+'</div>':''))+
        (x.history?'<div class="meta" style="margin-top:8px;white-space:pre-line">'+esc(x.history)+'</div>':'')+'</div>';
   });
   if(!h) h='<div class="info">No shift at this school on this day.</div>';
   $('dShifts').innerHTML=h;
+  ['AM','PM'].forEach(function(sh){ if($('dTo_'+sh)) pickInit('dTo_'+sh); });
   var anyNotes=['AM','PM'].map(function(k){return r.shifts[k].notes;}).filter(String)[0]||'';
   $('dNotes').value=anyNotes; $('dNotes').disabled=!anyEdit;
   $('dBanner').innerHTML = anyEdit ? (mode==='override'?'<div class="warn">This day is closed. You are editing as '+esc(S.user.role)+' – a reason is required.</div>':'<div class="info">'+esc(openMsg)+'.</div>') : '';
@@ -1539,26 +1546,39 @@ function renderDaily(){
   $('dSave').classList.toggle('hidden',!anyEdit);
   $('dSave').textContent = r.ds===S.now.ds ? "Save today's figures" : 'Save figures for '+dLabel(r.ds);
   calc();
-  var t='<tr><th>Date</th><th>Shift</th><th>Rec</th><th>Dist</th><th>Double</th><th>Left</th></tr>';
-  (r.recent||[]).forEach(function(x){ t+='<tr><td>'+dLabel(x.ds)+'</td><td>'+x.shift+'</td><td>'+x.rec+'</td><td>'+x.dist+'</td><td>'+(x.dbl||'')+'</td><td><b>'+x.close+'</b></td></tr>'; });
-  if(!(r.recent||[]).length) t+='<tr><td colspan="6">No figures yet.</td></tr>';
+  var t='<tr><th>Date</th><th>Shift</th><th>Rec</th><th>Transf.</th><th>Dist</th><th>Double</th><th>Left</th></tr>';
+  (r.recent||[]).forEach(function(x){ var tr=(x.tin?'+'+x.tin:'')+(x.tin&&x.tout?' ':'')+(x.tout?'−'+x.tout:''); t+='<tr><td>'+dLabel(x.ds)+'</td><td>'+x.shift+'</td><td>'+(x.virt?'–':x.rec)+'</td><td>'+tr+'</td><td>'+(x.virt?'–':x.dist)+'</td><td>'+(x.dbl||'')+'</td><td><b>'+x.close+'</b></td></tr>'; });
+  if(!(r.recent||[]).length) t+='<tr><td colspan="7">No figures yet.</td></tr>';
   $('dHist').innerHTML=t;
+}
+/* v9.3 transfers: parcels sent to another school (any school on snacks that day) and parcels received from other schools */
+function xferBox(sh,x,ed){
+  var r=S.daily, h='';
+  if(x.tIn) h+='<div class="xin">↘ <b>Transferred in: '+x.tIn+'</b> parcels from '+(x.tInList||[]).map(function(t){ return '<bdi>'+esc(t.name)+'</bdi> '+t.shift+' ('+t.qty+(t.by?', entered by '+esc(t.by):'')+')'; }).join(', ')+'</div>';
+  if(!ed && !x.tOut) return h;
+  var tg=(r.targets||[]).filter(function(t){ return t.v!==r.school.id+'|'+sh; });
+  var opts='<option value="">No transfer</option>'+tg.map(function(t){ return '<option value="'+t.v+'" data-q="'+esc(t.monitor+' '+t.id)+'"'+(x.tTo===t.v?' selected':'')+'>'+esc(t.name)+' – '+esc(t.village)+(r.targets.some(function(o){ return o.id===t.id&&o.shift!==t.shift; })?' · '+t.shift:'')+'</option>'; }).join('');
+  if(x.tTo && !tg.some(function(t){ return t.v===x.tTo; })) opts+='<option value="'+esc(x.tTo)+'" selected>'+esc(x.tTo)+'</option>';
+  h+='<details class="xfer"'+(x.tOut?' open':'')+'><summary>Transfer parcels to another school'+(x.tOut?' · '+x.tOut+' transferred':'')+'</summary>'+
+     '<div class="row2"><div><label>Parcels transferred out</label><input type="number" inputmode="numeric" min="0" data-f="tOut" value="'+(x.tOut||'')+'" placeholder="0"'+(ed?'':' disabled')+' oninput="calc()"></div>'+
+     '<div><label>To school</label><select id="dTo_'+sh+'" data-c="tTo" data-pkall="1"'+(ed?'':' disabled')+' onchange="calc()">'+opts+'</select></div></div></details>';
+  return h;
 }
 function vals(box){ var o={}; box.querySelectorAll('input[data-f]').forEach(function(el){ o[el.dataset.f]=el.value; }); box.querySelectorAll('[data-c]').forEach(function(el){ o[el.dataset.c]=el.value; }); return o; }
 /* v9.1 plan check: distributed + leftover + damaged must equal planned + leftover from before */
 function planChk(x, v){
   if(v.distributed==='' || v.received==='') return null;
-  var rec=+v.received||0, dist=+v.distributed||0, dmg=+v.damaged||0, left=x.opening+rec-dist-dmg, acc=dist+left+dmg;
+  var rec=+v.received||0, dist=+v.distributed||0, dmg=+v.damaged||0, ti=x.tIn||0, to=+v.tOut||0, left=x.opening+rec+ti-to-dist-dmg, acc=dist+left+dmg+to;
   if(x.planned==null) return rec>0 ? {bad:true, txt:'No plan was entered for this day – received '+rec+'.'} : {bad:false};
-  var exp=x.planned+x.opening;
-  return acc===exp ? {bad:false, txt:'Distributed '+dist+' + leftover '+left+(dmg?' + damaged '+dmg:'')+' = '+acc+' = planned '+x.planned+(x.opening?' + leftover from before '+x.opening:'')+'.'}
-    : {bad:true, txt:'Distributed '+dist+' + leftover '+left+(dmg?' + damaged '+dmg:'')+' = '+acc+', but planned '+x.planned+(x.opening?' + leftover from before '+x.opening:'')+' = '+exp+' ('+(acc>exp?'+':'')+(acc-exp)+').'};
+  var exp=x.planned+x.opening+ti, a='Distributed '+dist+' + leftover '+left+(dmg?' + damaged '+dmg:'')+(to?' + transferred out '+to:'')+' = '+acc, b='planned '+x.planned+(x.opening?' + leftover from before '+x.opening:'')+(ti?' + transferred in '+ti:'');
+  return acc===exp ? {bad:false, txt:a+' = '+b+'.'} : {bad:true, txt:a+', but '+b+' = '+exp+' ('+(acc>exp?'+':'')+(acc-exp)+').'};
 }
 function calc(){
   document.querySelectorAll('#dShifts .shift').forEach(function(box){
     var x=S.daily.shifts[box.dataset.sh], v=vals(box);
-    var rec=+v.received||0, dist=+v.distributed||0, dbl=+v.dbl||0, dmg=+v.damaged||0;
-    var left=x.opening+rec-dist-dmg, reach=dist-dbl;
+    var rec=+v.received||0, dist=+v.distributed||0, dbl=+v.dbl||0, dmg=+v.damaged||0, ti=x.tIn||0, to=+v.tOut||0;
+    var left=x.opening+rec+ti-to-dist-dmg, reach=dist-dbl;
+    var bb=box.querySelector('.bal'); if(bb) bb.textContent = v.distributed==='' || !(ti||to) ? '' : (x.opening?'Leftover from before '+x.opening+' + ':'')+'received '+rec+(ti?' + transferred in '+ti:'')+' = distributed '+dist+(dmg?' + damaged '+dmg:'')+(to?' + transferred out '+to:'')+' + leftover '+left;
     var lb=box.querySelector('.left'), rb=box.querySelector('.reach');
     lb.querySelector('b').textContent = v.distributed===''?'–':left;
     lb.classList.toggle('neg', left<0);
@@ -1578,8 +1598,9 @@ function saveDaily(){
     var v=vals(box);
     if(v.distributed===''&&!x.entered) return; // shift not reported yet – can be saved later
     if(v.received===''||v.distributed===''){ err=sh+': enter both parcels received and distributed (use 0 if none).'; return; }
-    var left=x.opening+(+v.received)-(+v.distributed)-(+v.damaged||0);
-    if(left<0) err=sh+': distributed + damaged is more than what was available ('+(x.opening+(+v.received))+').';
+    if(!(+v.tOut>0)){ v.tOut=''; v.tTo=''; } else if(!v.tTo){ err=sh+': choose the school the '+v.tOut+' parcels were transferred to.'; return; }
+    var left=x.opening+(+v.received)+(x.tIn||0)-(+v.tOut||0)-(+v.distributed)-(+v.damaged||0);
+    if(left<0) err=sh+': distributed + damaged'+(+v.tOut?' + transferred out':'')+' is more than what was available ('+(x.opening+(+v.received)+(x.tIn||0))+').';
     if((+v.dbl||0)>(+v.distributed)) err=sh+': double portions cannot be more than parcels distributed.';
     if((+v.distributed)-(+v.dbl||0)>x.students) warn.push(sh+': students reached is above enrolment ('+x.students+').');
     var pc=planChk(x,v); if(pc&&pc.bad){ if(!v.chkReason){ err=sh+': the figures do not match the plan – choose a reason for the difference.'; return; } if(/^Other/.test(v.chkReason)&&!String(v.chkNote||'').trim()){ err=sh+': explain the difference in the details box.'; return; } } else { v.chkReason=''; v.chkNote=''; }
