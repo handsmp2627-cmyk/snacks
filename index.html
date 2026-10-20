@@ -86,6 +86,8 @@
   .blk .bh{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px}
   .fl.ro b{text-align:center;font-size:16px;font-variant-numeric:tabular-nums;background:#f6f8fb;border-radius:8px;padding:8px 0}
   .fl.xr b{background:#efe8fb;color:#5b3b8e}
+  .fl small.rnote{display:block;font-size:11.5px;color:var(--muted);font-weight:400;margin-top:2px}
+  .fl.lockd input{background:#f6f8fb;color:#444;border-style:dashed}
   .blk .xtab{margin:8px 0 4px}
   #dSave.blocked{background:#b8c2d3}
   .xfer{margin-top:10px;border-top:1px dashed #d0d7e2;padding-top:6px}
@@ -1583,6 +1585,11 @@ function renderDaily(){
     var ed=x.editable; if(ed){ anyEdit=true; mode=x.mode; openMsg=x.msg; }
     var dis=ed?'':' disabled';
     var rec = x.received!=null ? x.received : (ed && x.planned!=null ? x.planned : '');
+    /* v9.14: received is typed only on the dates the PM opens; on other days it stays at the plan */
+    var rLock = ed && x.rcvLocked;
+    if(rLock) rec = x.received!=null ? x.received : (x.planned!=null ? x.planned : 0);
+    var rRow = rLock ? flRow('Received from the supplier<small class="rnote">locked to the plan – if a different number arrived, tell your Project Officer</small>','received',rec,' readonly tabindex="-1"','lockd')
+                     : flRow('Received from the supplier'+(ed && x.rcvOpen ? '<small class="rnote">type what arrived – it becomes today\'s plan</small>' : ''),'received',rec,dis);
     h+='<div class="shift" data-sh="'+sh+'"><h3>'+sh+' shift <span>'+x.students+' students'+(x.planned!=null?' · planned '+x.planned:' · no plan')+'</span></h3>'+
        (x.tIn||x.tOut?'<div class="xchips">'+(x.tIn?'<span class="xc">↘ '+x.tIn+' in</span>':'')+(x.tOut?'<span class="xc">↗ '+x.tOut+' out</span>':'')+'</div>':'');
     if(!x.working) h+='<div class="warn">'+esc(x.msg && !x.editable ? x.msg : 'Not a working day for this shift.')+'</div>';
@@ -1591,7 +1598,7 @@ function renderDaily(){
     /* v9.12: two blocks – In (with transfers first) and Out; saving needs in = out, with the storage room counted */
     h+='<div class="blk"><div class="bh">In – what you had today</div>'+
        '<div class="fl ro"><label>Left in storage from yesterday</label><b>'+x.opening+'</b></div>'+
-       flRow('Received from the supplier','received',rec,dis)+
+       rRow+
        xferBox(sh,x,ed)+
        (x.tIn?'<div class="fl ro xr"><label>+ Received from other schools</label><b>'+x.tIn+'</b></div>':'')+
        '<div class="fl ro xr tor hidden"><label>– Sent to other schools</label><b class="toutRo">0</b></div>'+
