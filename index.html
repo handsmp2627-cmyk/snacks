@@ -88,6 +88,14 @@
   .fl.xr b{background:#efe8fb;color:#5b3b8e}
   .fl small.rnote{display:block;font-size:11.5px;color:var(--muted);font-weight:400;margin-top:2px}
   .fl.lockd input{background:#f6f8fb;color:#444;border-style:dashed}
+  /* v9.15 warehouse tile */
+  .xtab.rq{border-color:#9fb3d1;background:#f3f7fc}.xtab.rq>summary{color:#2f5597}.xtab.rq .btn{margin-top:8px}
+  .wlist{max-height:55vh;overflow-y:auto;border:1px solid var(--line);border-radius:10px;margin-top:6px}
+  .wrow{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-bottom:1px solid var(--line);margin:0;color:var(--text);font-size:14px;cursor:pointer}
+  .wrow input{width:auto;margin-top:3px;flex:0 0 auto}.wrow span{flex:1;min-width:0}.wrow b{display:block;direction:auto;text-align:left}.wrow small{display:block;color:var(--muted);font-size:12px}
+  .wrow.off{opacity:.45}.wtools{display:flex;gap:14px;align-items:center;margin-top:6px}
+  .fl.wret{grid-template-columns:1fr 90px}.fl.wret label{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.fl.wret label input{width:auto}
+  .req.wcan{opacity:.55}
   .blk .xtab{margin:8px 0 4px}
   #dSave.blocked{background:#b8c2d3}
   .xfer{margin-top:10px;border-top:1px dashed #d0d7e2;padding-top:6px}
@@ -350,12 +358,13 @@
 <!-- HOME -->
 <section id="v-home" class="hidden">
   <div class="tiles">
+    <button class="tile hidden" id="tWh" onclick="go('wh')" style="border-left-color:#7f6000"><b>Warehouse <span id="tWhBadge"></span></b><span id="tWhText">Menu changes, returns to the supplier and delivered numbers to approve.</span></button>
     <button class="tile hidden" id="tDash" onclick="go('dash')" style="border-left-color:#2a78d6"><b>Dashboard</b><span>Snacks and kitchen figures by day, week, month or the whole programme – all schools, an area, a district, a kitchen or one school.</span></button>
     <button class="tile inf" onclick="go('info')" style="border-left-color:#548235"><b>School info <span id="tInfoBadge"></span></b><span>Students, allergies, recess time, contacts and working days. Changes go to your Project Officer for approval.</span></button>
     <button class="tile inf" onclick="go('hc')" style="border-left-color:#7030a0"><b>Headcount</b><span id="tHcText">Registration (from the school focal point) and your headcount, per grade and section.</span></button>
     <button class="tile hidden" id="tKitchen" onclick="go('kitchen')" style="border-left-color:#c55a11"><b>Kitchen sandwiches <span id="tKBadge"></span></b><span id="tKText">Sandwiches needed per school, kitchen confirmation and the number distributed.</span></button>
     <button class="tile snk" onclick="go('plan')"><b>Weekly snack plan</b><span id="tPlan">Forecast per school, day and shift.</span></button>
-    <button class="tile snk" onclick="go('daily')"><b>Snacks distribution</b><span id="tDaily">Received, distributed and leftovers – every day.</span></button>
+    <button class="tile snk" onclick="go('daily')"><b>Snacks distribution <span id="tDailyBadge"></span></b><span id="tDaily">Received, distributed and leftovers – every day.</span></button>
   </div>
   <div class="card" style="margin-top:14px">
     <h2>Rules</h2>
@@ -541,6 +550,7 @@
     <select id="dDate" onchange="loadDailyStatus()"></select>
     <label for="dSchool">School</label>
     <select id="dSchool" onchange="loadDaily()"></select>
+    <div id="dFix"></div>
   </div>
   <div id="dBody" class="hidden">
     <div class="card">
@@ -622,6 +632,24 @@
   <div id="dbBody"></div>
 </section>
 
+<!-- WAREHOUSE (v9.15) -->
+<section id="v-wh" class="hidden">
+  <div class="card hidden" id="wApprove">
+    <h2>Delivered numbers to approve</h2>
+    <div id="wApproveList"></div>
+  </div>
+  <div class="card">
+    <h2>Warehouse</h2>
+    <div class="seg" id="wTabs"><button id="wTabMenu" class="on" onclick="wTab('menu')">Menu changes<small>other snacks, same parcels</small></button><button id="wTabRet" onclick="wTab('ret')">Returns<small>back to the supplier</small></button></div>
+    <label for="wDate">Day</label>
+    <select id="wDate" onchange="wLoad()"></select>
+    <div id="wBanner"></div>
+  </div>
+  <div class="err" id="wErr"></div>
+  <div class="ok" id="wOk"></div>
+  <div id="wBody"></div>
+</section>
+
 <!-- KITCHEN -->
 <section id="v-kitchen" class="hidden">
   <div class="card">
@@ -648,7 +676,7 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbyzRf6yjLSRwU1wY_KvcIIGY4
 var S = { user:null, uid:'', pin:'', schools:[], reasons:[], plan:null, daily:null, now:null };
 function $(id){ return document.getElementById(id); }
 /* Calls that are safe to repeat automatically if Google returns an error page (busy server). */
-var NO_RETRY = { apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1 };
+var NO_RETRY = { apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
 var DEBUG = /[?&]debug=1/.test(location.search);
 function dbg(fn, srv, tot){ var d=$('dbg'); if(!d){ d=document.createElement('div'); d.id='dbg'; d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#111;color:#0f0;font:11px monospace;padding:4px 8px;z-index:40;max-height:30vh;overflow:auto'; document.body.appendChild(d); }
   d.innerHTML='<div>'+fn+': server '+(srv/1000).toFixed(2)+' s · total '+(tot/1000).toFixed(2)+' s · Google/network '+((tot-srv)/1000).toFixed(2)+' s</div>'+d.innerHTML; }
@@ -734,7 +762,7 @@ function roleLabel(r){ return /^viewer$/i.test(String(r||'').trim()) ? 'WFP' : r
 function fillUsers(b){
   if(!S.user) $('hsub').textContent = 'HAND';
   var groups = {}; b.users.forEach(function(u){ var g=roleLabel(u.role); (groups[g]=groups[g]||[]).push(u); });
-  var order=['Area Monitor','Kitchen Supervisor','Project Officer','Senior Project Officer','Project Manager','MEAL','WFP'];
+  var order=['Area Monitor','Kitchen Supervisor','Project Officer','Senior Project Officer','Project Manager','Warehouse Monitor','Logistics Admin','MEAL','WFP'];
   var h='<option value="">Select your name</option>';
   order.concat(Object.keys(groups).filter(function(k){return order.indexOf(k)<0;})).forEach(function(r){
     if(!groups[r]) return;
@@ -817,10 +845,22 @@ function applyLogin(r, uid, pin){
       $('tHcText').textContent='Registration and headcount per grade and section – view only.';
       $('rules').innerHTML='• <b>School info</b>: view only – students, allergies, recess times, contacts and working days for every school.'+(r.user.dash?'<br>• <b>Dashboard</b>: snacks and kitchen figures for every school – view only.':'');
     }
+    /* v9.15: Warehouse tile – warehouse monitor, logistics admin and the Project Manager */
+    var wh=r.user.wh; S.fix=[]; $('tDailyBadge').innerHTML='';
+    $('tWh').classList.toggle('hidden', !wh);
+    $('tWhBadge').innerHTML = r.whPending ? '<span class="badge2">'+r.whPending+' to approve</span>' : '';
+    if(hasSnack && r.user.canEnter) $('rules').innerHTML+='<br>• <b>Received from the supplier</b> = delivered – returns (it fills itself). If the supplier delivered a different number of parcels, use <b>Different number delivered?</b> in Snacks distribution – the warehouse monitor approves it. If a return is recorded after you saved, the day shows ⚠ to correct.';
+    if(wh){
+      if(wh.role!=='pm'){ ['tDash','tKitchen'].forEach(function(id){ $(id).classList.add('hidden'); }); Array.prototype.forEach.call(document.querySelectorAll('.tile.snk,.tile.inf'), function(t){ t.classList.add('hidden'); }); $('rules').innerHTML=''; }
+      $('tWhText').textContent = wh.canReturn ? 'Menu changes, returns to the supplier and delivered numbers to approve.' : 'Menu changes (other snacks, same number of parcels) – returns view only.';
+      $('rules').innerHTML+=($('rules').innerHTML?'<br>':'')+'• <b>Warehouse – menu changes</b>: tick the schools that got other snacks (same number of parcels). The supplier order, the waybill and the reconciliation follow.'+
+        (wh.canReturn?'<br>• <b>Warehouse – returns</b>: one or more items per school. If every item of the day\'s menu comes back, those parcels come off what the school received and the monitor is asked to correct the day.<br>• <b>Delivered numbers</b> reported by monitors wait for your approval.':'')+
+        '<br>• A month closes at 13:00 on the 2nd of the next month – after that its waybill is final.';
+    }
 }
 function signOut(){ if(S.uid) store('snl|'+S.uid,null); S.user=null; S.pin=''; store('snk_pin',null); go('login'); }
 function go(v){
-  ['login','home','info','plan','daily','kitchen','hc','dash'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
+  ['login','home','info','plan','daily','kitchen','hc','dash','wh'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
   if(typeof dbTipOff==='function') dbTipOff();
   $('btnBack').classList.toggle('hidden', v==='login'||v==='home');
   $('btnOut').classList.toggle('hidden', v==='login');
@@ -831,8 +871,24 @@ function go(v){
   if(v==='kitchen') initKitchen();
   if(v==='hc') initHc();
   if(v==='dash') initDash();
+  if(v==='wh') initWh();
+  if(v==='home') refreshInfoBadge();
   window.scrollTo(0,0);
 }
+/* v9.15 (21 Oct 2026): the "to approve" count on the School info tile is refreshed from the server whenever Home is shown (at most once a minute, or when the app comes back to the screen). Before, it was set only at sign-in, so it kept showing requests that a PO had already decided. */
+var _badgeAt=0;
+function refreshInfoBadge(force){ // v9.15: one call for every badge – School info / Warehouse approvals and days to correct
+  if(!S.user||!S.pin||S.user.infoOnly) return;
+  if(!force && Date.now()-_badgeAt<60000) return;
+  _badgeAt=Date.now();
+  call('apiNotices',S.uid,S.pin).then(function(n){
+    if(S.user.canOverride) $('tInfoBadge').innerHTML = n.info ? '<span class="badge2">'+n.info+' to approve</span>' : '';
+    $('tWhBadge').innerHTML = n.wh ? '<span class="badge2">'+n.wh+' to approve</span>' : '';
+    S.fix=n.fix||[]; $('tDailyBadge').innerHTML = S.fix.length ? '<span class="badge2">'+S.fix.length+' to correct</span>' : '';
+    if(!$('v-daily').classList.contains('hidden')) dFixList();
+  }).catch(function(){});
+}
+document.addEventListener('visibilitychange',function(){ if(!document.hidden && S.user && !$('v-home').classList.contains('hidden')) refreshInfoBadge(true); });
 function schoolOpts(sel, status, kind){
   var cur=sel.value, list=(kind==='i'||kind==='o') ? (S.infoSchools||S.schools) : S.schools;
   var mixed=list.some(function(x){return x.modality&&x.modality!=='In-school snacks';});
@@ -840,7 +896,7 @@ function schoolOpts(sel, status, kind){
   list.forEach(function(s){
     var st=status&&status[s.id], mark='';
     if(st){ var need=kind==='p'?st.planNeed:st.dailyNeed, have=kind==='p'?st.planHave:st.dailyHave;
-      mark = need===0 ? '  ·  no shift' : have>=need ? '  ✓' : have>0 ? '  · '+have+'/'+need : '  · to do'; }
+      mark = need===0 ? '  ·  no shift' : have>=need ? '  ✓' : have>0 ? '  · '+have+'/'+need : '  · to do'; if(kind==='d'&&st.fix) mark+='  · ⚠ correct'; }
     h+='<option value="'+s.id+'" data-q="'+esc((s.monitor||'')+' '+(s.kitchenName||''))+'">'+esc(s.name)+' – '+esc(s.village)+(mixed?'  · '+(s.modality==='School kitchen'?'kitchen':s.modality==='In-school snacks'?'snacks':'nearby'):'')+mark+'</option>';
   });
   sel.innerHTML=h; sel.value=cur; pickSync(sel.id);
@@ -1197,6 +1253,7 @@ function initInfo(){
 function loadApprovals(){
   if(!S.user.canOverride){ $('iApprove').classList.add('hidden'); return; }
   call('apiPending',S.uid,S.pin).then(function(list){
+    list=list.filter(function(q){ return q.kind!=='Received from supplier'; }); // v9.15: delivered numbers are approved in the Warehouse tile
     $('iApprove').classList.toggle('hidden',!list.length);
     $('tInfoBadge').innerHTML = list.length ? '<span class="badge2">'+list.length+' to approve</span>' : '';
     $('iApproveList').innerHTML=list.map(function(q){
@@ -1204,7 +1261,7 @@ function loadApprovals(){
         esc(q.reason)+(q.note?' – '+esc(q.note):'')+'<br><span class="meta">'+esc(q.by)+' · '+esc(q.at)+' · '+q.id+'</span>'+
         '<div class="act"><button class="btn ok2" onclick="decide(\''+q.id+'\',\'Approved\')">Approve</button><button class="btn no" onclick="decide(\''+q.id+'\',\'Rejected\')">Reject</button></div></div>';
     }).join('');
-  });
+  }).catch(function(e){ $('iApprove').classList.remove('hidden'); $('iApproveList').innerHTML='<div class="warn">Could not load the requests to approve: '+esc((e&&e.msg)||e)+'. Go back and open School info again.</div>'; });
 }
 function decide(id,dec){
   var note = dec==='Rejected' ? (prompt('Reason for rejecting (optional):')||'') : '';
@@ -1558,6 +1615,7 @@ function initDaily(){
   $('dDate').innerHTML=h; $('dDate').value=today;
   schoolOpts($('dSchool'),null,'d');
   $('dBody').classList.add('hidden');
+  dFixList(); refreshInfoBadge(true);
   loadDailyStatus();
 }
 function loadDailyStatus(){
@@ -1585,13 +1643,14 @@ function renderDaily(){
     var ed=x.editable; if(ed){ anyEdit=true; mode=x.mode; openMsg=x.msg; }
     var dis=ed?'':' disabled';
     var rec = x.received!=null ? x.received : (ed && x.planned!=null ? x.planned : '');
-    /* v9.14: received is typed only on the dates the PM opens; on other days it stays at the plan */
-    var rLock = ed && x.rcvLocked;
-    if(rLock) rec = x.received!=null ? x.received : (x.planned!=null ? x.planned : 0);
-    var rRow = rLock ? flRow('Received from the supplier<small class="rnote">locked to the plan – if a different number arrived, tell your Project Officer</small>','received',rec,' readonly tabindex="-1"','lockd')
-                     : flRow('Received from the supplier'+(ed && x.rcvOpen ? '<small class="rnote">type what arrived – it becomes today\'s plan</small>' : ''),'received',rec,dis);
+    /* v9.15: received from the supplier = delivered (plan, or the delivered number reported) – whole parcels returned; it fills itself */
+    var rRow;
+    if(x.dlv){ rec=x.dlv.expected; rRow=rcvBlock(sh,x,ed); }
+    else { var rLock = ed && x.rcvLocked; if(rLock) rec = x.received!=null ? x.received : (x.planned!=null ? x.planned : 0);
+      rRow = rLock ? flRow('Received from the supplier<small class="rnote">locked to the plan</small>','received',rec,' readonly tabindex="-1"','lockd') : flRow('Received from the supplier','received',rec,dis); }
     h+='<div class="shift" data-sh="'+sh+'"><h3>'+sh+' shift <span>'+x.students+' students'+(x.planned!=null?' · planned '+x.planned:' · no plan')+'</span></h3>'+
        (x.tIn||x.tOut?'<div class="xchips">'+(x.tIn?'<span class="xc">↘ '+x.tIn+' in</span>':'')+(x.tOut?'<span class="xc">↗ '+x.tOut+' out</span>':'')+'</div>':'');
+    if(x.notice) h+='<div class="warn">⚠ <b>Correct this day</b>: received from the supplier is now <b>'+x.dlv.expected+'</b> (you saved '+x.received+') – '+esc(x.dlv.whole?x.dlv.whole+' parcels were returned to the supplier':x.dlv.aStatus==='plan'?'the delivered number went back to the plan':'the delivered number changed')+'. Update students reached and the storage count so every parcel is accounted for, then save.</div>';
     if(!x.working) h+='<div class="warn">'+esc(x.msg && !x.editable ? x.msg : 'Not a working day for this shift.')+'</div>';
     else if(!ed) h+='<div class="info">'+esc(x.msg)+(x.entered?'':' · nothing was entered')+'</div>';
     var thr = x.damaged!=null ? Math.max(0,(x.damaged||0)-(x.helpers||0)) : '';
@@ -1674,7 +1733,8 @@ function vals(box){ var o={}; box.querySelectorAll('input[data-f]').forEach(func
 /* v9.1 plan check: distributed + leftover + damaged must equal planned + leftover from before */
 function planChk(x, v){
   if(v.distributed==='' || v.received==='') return null;
-  var rec=+v.received||0;
+  var rec=+v.received||0, dl=x.dlv, pq=x.planned||0;
+  if(dl) return rec===pq ? {bad:false, txt:'received '+rec+' = planned '+pq+'.'} : {bad:false, info:true, txt:'received '+rec+', planned '+pq+' – '+[dl.aStatus!=='plan'?'delivered number '+(dl.aStatus==='pending'?'waiting for approval':'approved')+' ('+dl.aId+')':'', dl.whole?dl.whole+' returned to the supplier':''].filter(String).join(', ')+'.'}; // v9.15
   if(x.planned==null) return rec>0 ? {bad:true, txt:'No plan was entered for this day – received '+rec+'.'} : {bad:false};
   return rec===x.planned ? {bad:false, txt:'received '+rec+' = planned '+x.planned+'.'} : {bad:true, txt:'received '+rec+', planned '+x.planned+' ('+(rec>x.planned?'+':'')+(rec-x.planned)+').'};
 }
@@ -1682,7 +1742,7 @@ function calc(){
   document.querySelectorAll('#dShifts .shift').forEach(function(box){
     var x=S.daily.shifts[box.dataset.sh], v=vals(box), a=acct(x,v), sm=box.querySelector('.xfer .xt');
     if(sm) sm.textContent = +v.tOut ? v.tOut+' parcels' : '';
-    var xs=box.querySelector('.xtab .xsum'); if(xs) xs.textContent=xferSum(x.tIn,v.tOut);
+    var xs=box.querySelector('.xtab:not(.rq) .xsum'); if(xs) xs.textContent=xferSum(x.tIn,v.tOut);
     var xb=box.querySelector('.xfer'); if(xb) xb.classList.toggle('on', +v.tOut>0);
     var tr=box.querySelector('.tor'); if(tr){ tr.classList.toggle('hidden', !(+v.tOut>0)); tr.querySelector('b').textContent=+v.tOut||0; }
     var dist=+v.distributed||0, dbl=+v.dbl||0, reach=dist-dbl;
@@ -1700,7 +1760,7 @@ function calc(){
       else { ac.className='acct bad'; ac.textContent='⚠ '+(a.diff>0? a.diff+' parcel'+(a.diff>1?'s':'')+' not accounted for' : (-a.diff)+' parcel'+(a.diff<-1?'s':'')+' more than available')+' (available '+a.av+', accounted for '+a.out+'). Count again before saving.'; }
     }
     var pc=planChk(x,v), pb=box.querySelector('.pchk'), pr=box.querySelector('.pchkR');
-    if(pb){ pb.className='pchk'+(pc&&pc.bad?' bad':pc&&pc.txt?' good':''); pb.textContent = pc&&pc.txt ? (pc.bad?'⚠ Does not match the plan: ':'✓ Matches the plan: ')+pc.txt : ''; }
+    if(pb){ pb.className='pchk'+(pc&&pc.bad?' bad':pc&&pc.txt?' good':''); pb.textContent = pc&&pc.txt ? (pc.bad?'⚠ Does not match the plan: ':pc.info?'ℹ Differs from the plan: ':'✓ Matches the plan: ')+pc.txt : ''; }
     if(pr) pr.classList.toggle('hidden', !(pc&&pc.bad));
   });
   var bad=Array.prototype.some.call(document.querySelectorAll('#dShifts .acct'),function(e){ return e.classList.contains('bad'); });
@@ -2272,6 +2332,208 @@ function dbTipOff(){ var t=$('dbTip'); if(t) t.style.display='none'; }
 window.addEventListener('scroll', dbTipOff, {passive:true});
 var dbRsz=null;
 window.addEventListener('resize', function(){ clearTimeout(dbRsz); dbRsz=setTimeout(function(){ if(!$('v-dash').classList.contains('hidden') && D.d) D.charts.forEach(function(c){ dbChart(c.el,c.cfg); }); },150); });
+
+/* ---------- warehouse (v9.15): menu changes, returns, delivered numbers to approve ---------- */
+var W = { tab:'menu', d:null, rsid:'', from:'', q:'' };
+function initWh(){
+  show($('wErr'),''); show($('wOk'),'');
+  if(!$('wDate').options.length) $('wDate').innerHTML='<option value="'+todayLocal()+'">Today</option>';
+  wLoad();
+}
+function wTab(t){ W.tab=t; $('wTabMenu').classList.toggle('on',t==='menu'); $('wTabRet').classList.toggle('on',t==='ret'); show($('wOk'),''); show($('wErr'),''); if(W.d) wRender(); }
+function wLoad(keepMsg){
+  if(keepMsg!==true){ show($('wErr'),''); show($('wOk'),''); }
+  swr('wh', $('wBody'), 'apiWh', [S.uid,S.pin,$('wDate').value||todayLocal()], function(r){ if(!W.d||W.d.ds!==r.ds){ W.rsid=''; W.from=''; } W.d=r; wRender(); }, function(e){ show($('wErr'),e); });
+}
+function wFresh(msg){ store(cKey('apiWh',[S.uid,S.pin,$('wDate').value||todayLocal()]),null); busy(false); wLoad(true); if(msg) show($('wOk'),msg); window.scrollTo(0,0); _badgeAt=0; }
+function wRender(){
+  var r=W.d;
+  $('wDate').innerHTML=r.dates.map(function(d){return '<option value="'+d.value+'">'+esc(d.label)+'</option>';}).join(''); $('wDate').value=r.ds;
+  $('wTabRet').classList.toggle('hidden', r.role==='la' && !r.returns.length && false);
+  var b='';
+  if(r.locked) b+='<div class="warn">'+esc(r.label)+' is in a closed month (the waybill was sent on '+esc(r.lockTs)+') – view only.</div>';
+  $('wBanner').innerHTML=b;
+  wApprovals();
+  $('wBody').innerHTML = W.tab==='menu' ? wMenuHtml() : wRetHtml();
+  if(W.tab==='menu') wMenuSync(); else wRetSync();
+}
+function wApprovals(){
+  var r=W.d, L=r.pending||[];
+  $('wApprove').classList.toggle('hidden', !r.canApprove || !L.length);
+  $('tWhBadge').innerHTML = L.length ? '<span class="badge2">'+L.length+' to approve</span>' : '';
+  $('wApproveList').innerHTML=L.map(function(q){
+    return '<div class="req"><b dir="auto">'+esc(q.school)+'</b> – '+esc(q.village)+' · '+esc(q.label)+' · '+q.shift+'<br>Delivered: <b>'+q.current+' → '+q.requested+'</b> parcels<br>'+esc(q.reason)+(q.note?' – '+esc(q.note):'')+
+      '<br><span class="meta">'+esc(q.by)+' · '+esc(q.at)+' · '+q.id+'</span><div class="act"><button class="btn ok2" onclick="wDecide(\''+q.id+'\',\'Approved\')">Approve</button><button class="btn no" onclick="wDecide(\''+q.id+'\',\'Rejected\')">Reject</button></div></div>';
+  }).join('');
+}
+function wDecide(id,dec){
+  var note = dec==='Rejected' ? (prompt('Reason for rejecting (optional):')||'') : '';
+  busy(true);
+  call('apiDecide',S.uid,S.pin,id,dec,note).then(function(){ wFresh(dec==='Approved'?'Delivered number approved – the school\'s received figure follows it.':'Rejected – the school\'s received figure goes back to the plan.'); })
+    .catch(function(e){ busy(false); show($('wErr'),e); window.scrollTo(0,0); });
+}
+/* ---- menu changes ---- */
+function wMenuHtml(){
+  var r=W.d, h='';
+  h+='<div class="card"><h2>Menu changes – '+esc(r.label)+'</h2>';
+  if(r.menuEx.length){
+    h+=r.menuEx.map(function(x){ return '<div class="req" style="border-color:#c9d3e6;background:#f6f8fb"><b dir="auto">'+esc(x.name)+'</b>'+(x.shift&&x.shift!=='AM'?' · '+x.shift:'')+'<br>'+esc(x.from)+' → <b>'+esc(x.to)+'</b>'+(x.noSubs?' · <span class="multi">no allergy substitutes</span>':'')+
+      (x.by?'<br><span class="meta">'+esc(x.by)+'</span>':'<br><span class="meta">typed in the warehouse sheet</span>')+
+      (r.canMenu&&!r.locked?'<div class="act"><button class="btn sec" onclick="wMenuDel(\''+x.school+'\',\''+esc(x.from).replace(/'/g,"\\'")+'\')">Remove</button></div>':'')+'</div>'; }).join('');
+  } else h+='<div class="meta">No menu change on this day.</div>';
+  h+='</div>';
+  if(!r.canMenu || r.locked) return h;
+  if(!r.schools.length) return h+'<div class="card"><div class="info">No snacks ordered on this day.</div></div>';
+  var froms={}; r.schools.forEach(function(s){ s.menuItems.forEach(function(it){ froms[it]=(froms[it]||0)+1; }); });
+  var fk=Object.keys(froms).sort(function(a,b){ return froms[b]-froms[a]; });
+  if(!W.from || !froms[W.from]) W.from=fk[0]||'';
+  h+='<div class="card"><h2>New menu change</h2><div class="meta">The same number of parcels – only the snack changes. The supplier order, the waybill and the reconciliation follow.</div>'+
+    '<label for="wFrom">Item replaced</label><select id="wFrom" onchange="W.from=this.value;wMenuSync()">'+fk.map(function(it){ return '<option'+(it===W.from?' selected':'')+'>'+esc(it)+'</option>'; }).join('')+'</select>'+
+    '<label>Replaced with (tick one or more)</label><div class="achk" id="wTo">'+r.items.map(function(it){ return '<label><input type="checkbox" value="'+esc(it)+'"> '+esc(it)+'</label>'; }).join('')+'</div>'+
+    '<label>Allergy substitutes</label><div class="radio"><label><input type="radio" name="wAlg" value="0" checked> Given as planned</label><label><input type="radio" name="wAlg" value="1"> None – all students got the same snack</label></div>'+
+    '<label for="wNote">Note (optional)</label><input id="wNote" placeholder="e.g. supplier ran out of brioche">'+
+    '<label>Schools</label><input id="wQ" type="search" placeholder="Search school, village or monitor" oninput="W.q=this.value;wMenuSync()" value="'+esc(W.q)+'">'+
+    '<div class="wtools"><button type="button" class="amore" onclick="wTickAll(true)">Tick all shown</button><button type="button" class="amore" onclick="wTickAll(false)">Untick all</button><span class="mini" id="wCount"></span></div>'+
+    '<div id="wSchools" class="wlist">'+r.schools.map(function(s,i){ return '<label class="wrow" data-i="'+i+'"><input type="checkbox" value="'+s.id+'" onchange="wCountUpd()"><span><b dir="auto">'+esc(s.name)+'</b><small>'+esc(s.village)+' · '+esc(s.monitor)+' · '+s.qty+' parcels · '+esc(s.menu)+'</small></span></label>'; }).join('')+'</div>'+
+    '<button class="btn" onclick="wMenuSave()">Save menu change</button></div>';
+  return h;
+}
+function wMenuSync(){
+  var r=W.d; if(!$('wSchools')) return;
+  var q=normTxt(W.q||'');
+  Array.prototype.forEach.call($('wSchools').children,function(el){
+    var s=r.schools[+el.getAttribute('data-i')], ok=s.menuItems.indexOf(W.from)>=0, hit=!q || normTxt(s.name+' '+s.village+' '+s.monitor+' '+s.id).indexOf(q)>=0;
+    var cb=el.querySelector('input'); cb.disabled=!ok; if(!ok) cb.checked=false;
+    el.classList.toggle('off',!ok); el.classList.toggle('hidden',!hit);
+  });
+  Array.prototype.forEach.call($('wTo').querySelectorAll('input'),function(c){ if(c.value===W.from){ c.checked=false; c.disabled=true; } else c.disabled=false; });
+  wCountUpd();
+}
+function wTickAll(on){ Array.prototype.forEach.call($('wSchools').children,function(el){ var c=el.querySelector('input'); if(!el.classList.contains('hidden') && !c.disabled) c.checked=on; }); wCountUpd(); }
+function wCountUpd(){ var n=$('wSchools').querySelectorAll('input:checked').length; $('wCount').textContent = n ? n+' school'+(n>1?'s':'')+' ticked' : ''; }
+function wMenuSave(){
+  var ids=Array.prototype.map.call($('wSchools').querySelectorAll('input:checked'),function(c){return c.value;});
+  var to=Array.prototype.map.call($('wTo').querySelectorAll('input:checked'),function(c){return c.value;});
+  var ns=document.querySelector('input[name=wAlg]:checked').value==='1';
+  show($('wErr'),''); show($('wOk'),'');
+  if(!ids.length){ show($('wErr'),'Tick at least one school.'); return; }
+  if(!to.length){ show($('wErr'),'Tick what the schools got instead of '+W.from+'.'); return; }
+  if(!confirm(ids.length+' school'+(ids.length>1?'s':'')+': '+W.from+' → '+to.join(' + ')+(ns?' (no allergy substitutes)':'')+' on '+W.d.label+'. Save?')) return;
+  busy(true);
+  call('apiWhMenuChange',S.uid,S.pin,W.d.ds,ids,W.from,to,ns,$('wNote').value.trim()).then(function(x){
+    wFresh('Saved for '+x.saved+' school'+(x.saved===1?'':'s')+'.'+(x.skipped.length?' Not changed: '+x.skipped.join('; ')+'.':'')+' The order updates in a few minutes.');
+  }).catch(function(e){ busy(false); show($('wErr'),e); window.scrollTo(0,0); });
+}
+function wMenuDel(id,from){
+  if(!confirm('Remove this menu change ('+from+')? The school goes back to the planned menu.')) return;
+  busy(true);
+  call('apiWhMenuRemove',S.uid,S.pin,W.d.ds,id,from).then(function(){ wFresh('Menu change removed.'); }).catch(function(e){ busy(false); show($('wErr'),e); window.scrollTo(0,0); });
+}
+/* ---- returns ---- */
+function wRetHtml(){
+  var r=W.d, h='<div class="card"><h2>Returns – '+esc(r.label)+'</h2>';
+  if(r.returns.length) h+=r.returns.map(function(e){
+    return '<div class="req'+(e.status==='Cancelled'?' wcan':'')+'"><b dir="auto">'+esc(e.name)+'</b> · '+e.id+(e.status==='Cancelled'?' · <b>cancelled</b>':'')+'<br>'+esc(e.items.join(', '))+(e.whole?' · <b>'+e.whole+' whole parcels</b>':' · some items only')+
+      '<br>'+esc(e.reason)+(e.note?' – '+esc(e.note):'')+'<br><span class="meta">'+esc(e.by)+' · '+esc(e.at)+'</span>'+
+      (r.canReturn&&!r.locked&&e.status!=='Cancelled'?'<div class="act"><button class="btn sec" onclick="wRetCancel(\''+e.id+'\')">Cancel this return</button></div>':'')+'</div>';
+  }).join(''); else h+='<div class="meta">No return on this day.</div>';
+  h+='</div>';
+  if(r.canReturn && !r.locked && !r.isFuture && r.schools.length){
+    h+='<div class="card"><h2>New return</h2><div class="meta">Tick what came back and how many. If every item of the day\'s menu comes back, those parcels are taken off what the school received; if only some items come back (e.g. pears back, milk given), the parcels still count as received.</div>'+
+      '<label for="wRS">School</label><select id="wRS" onchange="W.rsid=this.value;wRetSync()"><option value="">Select a school ('+r.schools.length+')</option>'+
+      r.schools.map(function(s){ return '<option value="'+s.id+'|'+s.shift+'" data-q="'+esc(s.monitor+' '+s.id)+'"'+(W.rsid===s.id+'|'+s.shift?' selected':'')+'>'+esc(s.name)+' – '+esc(s.village)+' · '+s.qty+' parcels'+(s.shift!=='AM'?' · '+s.shift:'')+'</option>'; }).join('')+'</select>'+
+      '<div id="wRItems"></div>'+
+      '<label for="wRR">Reason</label><select id="wRR"><option value="">Select a reason</option>'+r.reasons.map(function(t){return '<option>'+esc(t)+'</option>';}).join('')+'</select>'+
+      '<label for="wRN">Note</label><input id="wRN" placeholder="e.g. pears soft and bruised – checked with the food safety officer">'+
+      '<button class="btn" onclick="wRetSave()">Save return</button></div>';
+  }
+  if(r.schools.length) h+='<div class="card"><h2>Schools on this day</h2><div class="tw"><table class="dt"><tr><th>School</th><th>Ordered</th><th>Delivered</th><th>Returned</th><th>Received</th><th>Monitor</th></tr>'+
+    r.schools.map(function(s){ return '<tr><td class="nm"><b dir="auto">'+esc(s.name)+'</b><small>'+esc(s.monitor)+' · '+esc(s.menu)+'</small></td><td>'+s.qty+'</td><td>'+s.arrived+(s.aStatus==='pending'?' ⏳':s.aStatus==='approved'?' ✓':'')+'</td><td>'+(s.whole||'')+
+      (s.items.some(function(i){return i.ret;})?'<small class="mini"> '+s.items.filter(function(i){return i.ret;}).map(function(i){return esc(i.it)+' '+i.ret;}).join(', ')+'</small>':'')+'</td><td>'+s.expected+'</td><td>'+(s.saved==null?'–':s.notice?'<b class="overt">'+s.saved+' ⚠</b>':s.saved)+'</td></tr>'; }).join('')+
+    '</table></div><div class="dbnote">Delivered ⏳ = a different number reported by the monitor, waiting for approval. Monitor ⚠ = the monitor saved another received figure and is asked to correct it.</div></div>';
+  return h;
+}
+function wRetSync(){
+  if(!$('wRS')) return;
+  pickInit('wRS'); pickSync('wRS');
+  var r=W.d, p=(W.rsid||'').split('|'), s=r.schools.filter(function(x){ return x.id===p[0] && x.shift===p[1]; })[0];
+  if(!s){ $('wRItems').innerHTML=''; return; }
+  $('wRItems').innerHTML='<label>What came back</label>'+s.items.map(function(i,k){
+    var left=i.q-i.ret;
+    return '<div class="fl wret"><label><input type="checkbox" data-k="'+k+'"'+(left<=0?' disabled':'')+' onchange="wRetCalc()"> '+esc(i.it)+(i.main?'':' <span class="mini">(allergy substitute)</span>')+
+      '<small class="rnote">'+i.q+' delivered'+(i.ret?' · '+i.ret+' already returned':'')+'</small></label><input type="number" inputmode="numeric" min="1" max="'+left+'" data-q="'+k+'" value="'+(left>0?left:'')+'" oninput="wRetCalc()"></div>';
+  }).join('')+'<div class="info" id="wRWhole"></div>';
+  wRetCalc();
+}
+function wRetSel(){
+  var r=W.d, p=(W.rsid||'').split('|'), s=r.schools.filter(function(x){ return x.id===p[0] && x.shift===p[1]; })[0], out=[];
+  if(!s) return {s:null,list:[]};
+  Array.prototype.forEach.call($('wRItems').querySelectorAll('input[type=checkbox]'),function(c){ if(!c.checked) return; var k=+c.getAttribute('data-k'), q=$('wRItems').querySelector('input[data-q="'+k+'"]').value; out.push({it:s.items[k].it, q:+q||0, main:s.items[k].main}); });
+  return {s:s,list:out};
+}
+function wRetCalc(){
+  var x=wRetSel(), s=x.s, el=$('wRWhole'); if(!s||!el) return;
+  var main=s.items.filter(function(i){return i.main;}), got={}; x.list.forEach(function(i){ got[i.it]=(got[i.it]||0)+i.q; });
+  var whole = main.length && main.every(function(i){ return got[i.it]>0; }) ? Math.min.apply(null, main.map(function(i){ return got[i.it]; })) : 0;
+  el.innerHTML = !x.list.length ? 'Tick the items that came back.' : whole ? '<b>'+whole+' whole parcels</b> come off what the school received ('+s.expected+' → '+Math.max(0,s.expected-whole)+').'+(s.saved!=null?' The monitor already saved this day and will be asked to correct it.':'') :
+    'Only some items – the parcels still count as received at the school. The waybill\'s Return tab shows the items.';
+}
+function wRetSave(){
+  var x=wRetSel(), rs=$('wRR').value, nt=$('wRN').value.trim();
+  show($('wErr'),''); show($('wOk'),'');
+  if(!x.s){ show($('wErr'),'Choose the school.'); return; }
+  if(!x.list.length){ show($('wErr'),'Tick at least one item and enter how many came back.'); return; }
+  if(x.list.some(function(i){ return !(i.q>0); })){ show($('wErr'),'Enter the quantity for each ticked item.'); return; }
+  if(!rs){ show($('wErr'),'Choose the reason.'); return; }
+  if(!confirm(x.s.name+': return '+x.list.map(function(i){return i.it+' '+i.q;}).join(', ')+' on '+W.d.label+'. Save?')) return;
+  busy(true);
+  call('apiWhReturn',S.uid,S.pin,W.d.ds,x.s.id,x.s.shift,x.list.map(function(i){return {it:i.it,q:i.q};}),rs,nt).then(function(res){
+    W.rsid='';
+    wFresh('Return saved ('+res.id+')'+(res.whole?': '+res.whole+' whole parcels – received at the school is now '+res.expected+'.':' – some items only, received at the school unchanged.')+(res.notice?' The monitor saved '+res.saved+' before – they are asked to correct the day.':''));
+  }).catch(function(e){ busy(false); show($('wErr'),e); window.scrollTo(0,0); });
+}
+function wRetCancel(id){
+  var why=prompt('Reason for cancelling '+id+' (e.g. entered by mistake):'); if(!why) return;
+  busy(true);
+  call('apiWhReturnCancel',S.uid,S.pin,id,why).then(function(){ wFresh('Return '+id+' cancelled.'); }).catch(function(e){ busy(false); show($('wErr'),e); window.scrollTo(0,0); });
+}
+/* ---- Snacks distribution: delivered number and returns (v9.15) ---- */
+function rcvBlock(sh,x,ed){
+  var d=x.dlv, h='';
+  h+='<div class="fl ro"><label>Delivered by the supplier<small class="rnote">'+(d.aStatus==='plan'?'= the plan':d.aStatus==='approved'?'changed – approved ('+esc(d.aId)+')':'changed – waiting for approval ('+esc(d.aId)+')')+'</small></label><b>'+d.arrived+'</b></div>';
+  if(d.whole) h+='<div class="fl ro xr"><label>– Returned to the supplier<small class="rnote">recorded by the warehouse</small></label><b>'+d.whole+'</b></div>';
+  h+=flRow('= Received from the supplier','received',d.expected,' readonly tabindex="-1"','lockd');
+  var ri=Object.keys(d.retItems||{}).filter(function(k){ return d.retItems[k]; });
+  if(ri.length) h+='<div class="mini">Items returned: '+ri.map(function(k){ return esc(k)+' '+d.retItems[k]; }).join(', ')+(d.whole?'':' – only some items, so the parcels still count as received')+'</div>';
+  if(x.canReq && x.working) h+='<details class="xtab rq"><summary>Different number delivered? <span class="xsum">'+(d.aStatus==='pending'?'waiting for approval':'tap to report')+'</span></summary><div class="xbody">'+
+    '<div class="mini xs">Count the parcels the supplier left at the school. The warehouse monitor approves it – until then you can save the day with your number, marked pending.</div>'+
+    '<div class="row2"><div><label>Parcels delivered</label><input type="number" inputmode="numeric" min="0" id="rq_'+sh+'"></div><div><label>Reason</label><select id="rqr_'+sh+'"><option value="">Select</option>'+
+    (S.daily.rcvReasons||[]).map(function(t){ return '<option>'+esc(t)+'</option>'; }).join('')+'</select></div></div>'+
+    '<input id="rqn_'+sh+'" placeholder="Details, e.g. 20 parcels missing from the truck" style="margin-top:8px">'+
+    '<button type="button" class="btn sec" onclick="sendRcv(\''+sh+'\')">Send</button></div></details>';
+  return h;
+}
+function sendRcv(sh){
+  var q=$('rq_'+sh).value, rs=$('rqr_'+sh).value, nt=$('rqn_'+sh).value.trim(), r=S.daily;
+  show($('dErr'),''); show($('dOk'),'');
+  if(q===''){ show($('dErr'),'Enter the number of parcels delivered.'); return; }
+  if(!rs){ show($('dErr'),'Choose a reason.'); return; }
+  if(/^Other/.test(rs) && !nt){ show($('dErr'),'Explain the difference in the details box.'); return; }
+  busy(true);
+  call('apiRequestReceived',S.uid,S.pin,r.school.id,r.ds,sh,+q,rs,nt).then(function(x){
+    var msg = x.status==='Approved' ? 'Delivered number saved ('+x.qty+').' : 'Sent for approval ('+x.id+'). You can save the day now with '+x.qty+' – it is marked pending until approved.';
+    return call('apiGetDaily',S.uid,S.pin,r.school.id,r.ds).then(function(d){ busy(false); cPut(cKey('apiGetDaily',[S.uid,S.pin,r.school.id,r.ds]),d); S.daily=d; renderDaily(); show($('dOk'),msg); _badgeAt=0; });
+  }).catch(function(e){ busy(false); show($('dErr'),e); });
+}
+function dFixList(){
+  var L=S.fix||[], el=$('dFix'); if(!el) return;
+  el.innerHTML = L.length ? '<div class="warn">⚠ <b>To correct</b> – the delivered number or a return changed after you saved:'+L.map(function(f,i){ return '<div style="margin-top:4px"><a href="#" onclick="dFixGo('+i+');return false"><bdi>'+esc(f.name)+'</bdi> – '+esc(f.label)+(f.shift!=='AM'?' '+f.shift:'')+'</a>: received is now <b>'+f.expected+'</b> (you saved '+f.saved+')</div>'; }).join('')+'</div>' : '';
+}
+function dFixGo(i){
+  var f=(S.fix||[])[i]; if(!f) return;
+  if(!Array.prototype.some.call($('dDate').options,function(o){ return o.value===f.ds; })){ var o=document.createElement('option'); o.value=f.ds; o.textContent=f.label; $('dDate').appendChild(o); }
+  $('dDate').value=f.ds; $('dSchool').value=f.id; pickSync('dSchool'); loadDaily();
+}
 
 ['iSchool','pSchool','dSchool','hSchool','dbSchool'].forEach(pickInit);
 </script>
