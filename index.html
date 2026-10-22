@@ -2334,7 +2334,7 @@ var dbRsz=null;
 window.addEventListener('resize', function(){ clearTimeout(dbRsz); dbRsz=setTimeout(function(){ if(!$('v-dash').classList.contains('hidden') && D.d) D.charts.forEach(function(c){ dbChart(c.el,c.cfg); }); },150); });
 
 /* ---------- warehouse (v9.15): menu changes, returns, delivered numbers to approve ---------- */
-var W = { tab:'menu', d:null, rsid:'', from:'', q:'' };
+var W = { tab:'menu', d:null, rsid:'', froms:[], q:'' };
 function initWh(){
   show($('wErr'),''); show($('wOk'),'');
   if(!$('wDate').options.length) $('wDate').innerHTML='<option value="'+todayLocal()+'">Today</option>';
@@ -2343,7 +2343,7 @@ function initWh(){
 function wTab(t){ W.tab=t; $('wTabMenu').classList.toggle('on',t==='menu'); $('wTabRet').classList.toggle('on',t==='ret'); show($('wOk'),''); show($('wErr'),''); if(W.d) wRender(); }
 function wLoad(keepMsg){
   if(keepMsg!==true){ show($('wErr'),''); show($('wOk'),''); }
-  swr('wh', $('wBody'), 'apiWh', [S.uid,S.pin,$('wDate').value||todayLocal()], function(r){ if(!W.d||W.d.ds!==r.ds){ W.rsid=''; W.from=''; } W.d=r; wRender(); }, function(e){ show($('wErr'),e); });
+  swr('wh', $('wBody'), 'apiWh', [S.uid,S.pin,$('wDate').value||todayLocal()], function(r){ if(!W.d||W.d.ds!==r.ds){ W.rsid=''; W.froms=[]; } W.d=r; wRender(); }, function(e){ show($('wErr'),e); });
 }
 function wFresh(msg){ store(cKey('apiWh',[S.uid,S.pin,$('wDate').value||todayLocal()]),null); busy(false); wLoad(true); if(msg) show($('wOk'),msg); window.scrollTo(0,0); _badgeAt=0; }
 function wRender(){
@@ -2386,9 +2386,9 @@ function wMenuHtml(){
   if(!r.schools.length) return h+'<div class="card"><div class="info">No snacks ordered on this day.</div></div>';
   var froms={}; r.schools.forEach(function(s){ s.menuItems.forEach(function(it){ froms[it]=(froms[it]||0)+1; }); });
   var fk=Object.keys(froms).sort(function(a,b){ return froms[b]-froms[a]; });
-  if(!W.from || !froms[W.from]) W.from=fk[0]||'';
+  W.froms=W.froms.filter(function(it){ return froms[it]; }); if(!W.froms.length && fk[0]) W.froms=[fk[0]];
   h+='<div class="card"><h2>New menu change</h2><div class="meta">The same number of parcels – only the snack changes. The supplier order, the waybill and the reconciliation follow.</div>'+
-    '<label for="wFrom">Item replaced</label><select id="wFrom" onchange="W.from=this.value;wMenuSync()">'+fk.map(function(it){ return '<option'+(it===W.from?' selected':'')+'>'+esc(it)+'</option>'; }).join('')+'</select>'+
+    '<label>Item(s) replaced (tick one or more – e.g. two items replaced by one)</label><div class="achk" id="wFrom">'+fk.map(function(it){ return '<label><input type="checkbox" value="'+esc(it)+'"'+(W.froms.indexOf(it)>=0?' checked':'')+' onchange="wFromUpd()"> '+esc(it)+'</label>'; }).join('')+'</div>'+
     '<label>Replaced with (tick one or more)</label><div class="achk" id="wTo">'+r.items.map(function(it){ return '<label><input type="checkbox" value="'+esc(it)+'"> '+esc(it)+'</label>'; }).join('')+'</div>'+
     '<label>Allergy substitutes</label><div class="radio"><label><input type="radio" name="wAlg" value="0" checked> Given as planned</label><label><input type="radio" name="wAlg" value="1"> None – all students got the same snack</label></div>'+
     '<label for="wNote">Note (optional)</label><input id="wNote" placeholder="e.g. supplier ran out of brioche">'+
@@ -2402,13 +2402,14 @@ function wMenuSync(){
   var r=W.d; if(!$('wSchools')) return;
   var q=normTxt(W.q||'');
   Array.prototype.forEach.call($('wSchools').children,function(el){
-    var s=r.schools[+el.getAttribute('data-i')], ok=s.menuItems.indexOf(W.from)>=0, hit=!q || normTxt(s.name+' '+s.village+' '+s.monitor+' '+s.id).indexOf(q)>=0;
+    var s=r.schools[+el.getAttribute('data-i')], ok=W.froms.length>0 && W.froms.every(function(it){ return s.menuItems.indexOf(it)>=0; }), hit=!q || normTxt(s.name+' '+s.village+' '+s.monitor+' '+s.id).indexOf(q)>=0;
     var cb=el.querySelector('input'); cb.disabled=!ok; if(!ok) cb.checked=false;
     el.classList.toggle('off',!ok); el.classList.toggle('hidden',!hit);
   });
-  Array.prototype.forEach.call($('wTo').querySelectorAll('input'),function(c){ if(c.value===W.from){ c.checked=false; c.disabled=true; } else c.disabled=false; });
+  Array.prototype.forEach.call($('wTo').querySelectorAll('input'),function(c){ if(W.froms.indexOf(c.value)>=0){ c.checked=false; c.disabled=true; } else c.disabled=false; });
   wCountUpd();
 }
+function wFromUpd(){ W.froms=Array.prototype.map.call($('wFrom').querySelectorAll('input:checked'),function(c){return c.value;}); wMenuSync(); }
 function wTickAll(on){ Array.prototype.forEach.call($('wSchools').children,function(el){ var c=el.querySelector('input'); if(!el.classList.contains('hidden') && !c.disabled) c.checked=on; }); wCountUpd(); }
 function wCountUpd(){ var n=$('wSchools').querySelectorAll('input:checked').length; $('wCount').textContent = n ? n+' school'+(n>1?'s':'')+' ticked' : ''; }
 function wMenuSave(){
@@ -2417,10 +2418,11 @@ function wMenuSave(){
   var ns=document.querySelector('input[name=wAlg]:checked').value==='1';
   show($('wErr'),''); show($('wOk'),'');
   if(!ids.length){ show($('wErr'),'Tick at least one school.'); return; }
-  if(!to.length){ show($('wErr'),'Tick what the schools got instead of '+W.from+'.'); return; }
-  if(!confirm(ids.length+' school'+(ids.length>1?'s':'')+': '+W.from+' → '+to.join(' + ')+(ns?' (no allergy substitutes)':'')+' on '+W.d.label+'. Save?')) return;
+  if(!W.froms.length){ show($('wErr'),'Tick the item(s) that were replaced.'); return; }
+  if(!to.length){ show($('wErr'),'Tick what the schools got instead of '+W.froms.join(' + ')+'.'); return; }
+  if(!confirm(ids.length+' school'+(ids.length>1?'s':'')+': '+W.froms.join(' + ')+' → '+to.join(' + ')+(ns?' (no allergy substitutes)':'')+' on '+W.d.label+'. Save?')) return;
   busy(true);
-  call('apiWhMenuChange',S.uid,S.pin,W.d.ds,ids,W.from,to,ns,$('wNote').value.trim()).then(function(x){
+  call('apiWhMenuChange',S.uid,S.pin,W.d.ds,ids,W.froms,to,ns,$('wNote').value.trim()).then(function(x){
     wFresh('Saved for '+x.saved+' school'+(x.saved===1?'':'s')+'.'+(x.skipped.length?' Not changed: '+x.skipped.join('; ')+'.':'')+' The order updates in a few minutes.');
   }).catch(function(e){ busy(false); show($('wErr'),e); window.scrollTo(0,0); });
 }
