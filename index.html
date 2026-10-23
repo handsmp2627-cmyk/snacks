@@ -88,6 +88,13 @@
   .fl.xr b{background:#efe8fb;color:#5b3b8e}
   .fl small.rnote{display:block;font-size:11.5px;color:var(--muted);font-weight:400;margin-top:2px}
   .fl.lockd input{background:#f6f8fb;color:#444;border-style:dashed}
+  /* v9.17: optional Out lines */
+  .xin2{display:flex;gap:6px;align-items:center}.xin2 input{flex:1;min-width:0}
+  .xrm{flex:0 0 auto;width:30px;height:30px;border:1px solid #d6dbe4;background:#fff;color:#9c0006;border-radius:8px;cursor:pointer;font-size:13px;padding:0}
+  .addl{margin-top:8px}.addl select{border-style:dashed;color:var(--navy2);font-weight:600;background:#f8faff}
+  .xl .lnote{margin-top:6px;font-size:13px}.xl .lnote.need{border-color:var(--redT);background:#fff5f5}
+  .xl.amb .fl input{background:#fff4d6;border-color:#e0a800}.d10{background:#fff4d6;color:#7a5200;border-radius:8px;padding:7px 10px;font-size:12px;margin-top:6px;font-weight:600}
+  .xtip{margin:2px 0 0}
   /* v9.15 warehouse tile */
   .xtab.rq{border-color:#9fb3d1;background:#f3f7fc}.xtab.rq>summary{color:#2f5597}.xtab.rq .btn{margin-top:8px}
   .wlist{max-height:55vh;overflow-y:auto;border:1px solid var(--line);border-radius:10px;margin-top:6px}
@@ -96,6 +103,7 @@
   .wrow.off{opacity:.45}.wtools{display:flex;gap:14px;align-items:center;margin-top:6px}
   .fl.wret{grid-template-columns:1fr 90px}.fl.wret label{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.fl.wret label input{width:auto}
   .req.wcan{opacity:.55}
+  .radio.wrt{flex-direction:column}.radio.wrt label{align-items:flex-start;flex-wrap:wrap}.radio.wrt small{display:block;width:100%;color:var(--muted);font-size:11.5px;margin-left:22px}
   .blk .xtab{margin:8px 0 4px}
   #dSave.blocked{background:#b8c2d3}
   .xfer{margin-top:10px;border-top:1px dashed #d0d7e2;padding-top:6px}
@@ -258,6 +266,7 @@
   @media (min-width:600px){ .dfil .row2{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))} #dbWhenW{grid-column:auto} }
   .kpis .kpi.hero ~ .kpi:last-child:nth-child(even){grid-column:span 2}
   @media (min-width:600px){ .kpis .kpi.hero ~ .kpi:last-child:nth-child(even){grid-column:auto} }
+  .segrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.segrow .seg{margin-top:0;flex:1 1 220px}.segrow .seg.hidden{display:none}
   .dbhd{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
   .dbhd h2{margin:0;font-size:17px}
   .dbhd .meta{margin-top:3px}
@@ -618,12 +627,13 @@
   <div class="card dfil">
     <div class="seg" id="dbMod"><button data-v="snacks" onclick="dbSet('mod','snacks')">Snacks<small>in-school + nearby on snacks</small></button><button data-v="kitchen" onclick="dbSet('mod','kitchen')">Kitchens<small>sandwiches</small></button></div>
     <div class="seg" id="dbPer"><button data-v="day" onclick="dbSet('period','day')">Day</button><button data-v="week" onclick="dbSet('period','week')">Week</button><button data-v="month" onclick="dbSet('period','month')">Month</button><button data-v="all" onclick="dbSet('period','all')">Programme</button></div>
+    <div class="segrow"><div class="seg" id="dbTypeSeg"></div><div class="seg" id="dbShiftSeg"></div></div>
     <div class="row2">
       <div id="dbWhenW"><label for="dbWhen" id="dbWhenL">Week</label><select id="dbWhen" onchange="dbWhen(this.value)"></select><input id="dbDay" type="date" class="hidden" onchange="dbWhen(this.value)"></div>
       <div><label for="dbArea">Area</label><select id="dbArea" onchange="dbScope('area',this.value)"></select></div>
       <div><label for="dbCaza">District</label><select id="dbCaza" onchange="dbScope('caza',this.value)"></select></div>
       <div id="dbKitW" class="hidden"><label for="dbKit">Kitchen</label><select id="dbKit" onchange="dbScope('kid',this.value)"></select></div>
-      <div><label for="dbType">Schools</label><select id="dbType" onchange="dbScope('type',this.value)"></select></div>
+      <div class="hidden"><label for="dbType">Schools</label><select id="dbType" onchange="dbScope('type',this.value)"></select></div>
     </div>
     <label for="dbSchool">School</label>
     <select id="dbSchool" data-pkall="1" onchange="dbScope('sid',this.value)"></select>
@@ -676,7 +686,7 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbyzRf6yjLSRwU1wY_KvcIIGY4
 var S = { user:null, uid:'', pin:'', schools:[], reasons:[], plan:null, daily:null, now:null };
 function $(id){ return document.getElementById(id); }
 /* Calls that are safe to repeat automatically if Google returns an error page (busy server). */
-var NO_RETRY = { apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
+var NO_RETRY = { apiWhReturnType:1, apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
 var DEBUG = /[?&]debug=1/.test(location.search);
 function dbg(fn, srv, tot){ var d=$('dbg'); if(!d){ d=document.createElement('div'); d.id='dbg'; d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#111;color:#0f0;font:11px monospace;padding:4px 8px;z-index:40;max-height:30vh;overflow:auto'; document.body.appendChild(d); }
   d.innerHTML='<div>'+fn+': server '+(srv/1000).toFixed(2)+' s · total '+(tot/1000).toFixed(2)+' s · Google/network '+((tot-srv)/1000).toFixed(2)+' s</div>'+d.innerHTML; }
@@ -1653,7 +1663,7 @@ function renderDaily(){
     if(x.notice) h+='<div class="warn">⚠ <b>Correct this day</b>: received from the supplier is now <b>'+x.dlv.expected+'</b> (you saved '+x.received+') – '+esc(x.dlv.whole?x.dlv.whole+' parcels were returned to the supplier':x.dlv.aStatus==='plan'?'the delivered number went back to the plan':'the delivered number changed')+'. Update students reached and the storage count so every parcel is accounted for, then save.</div>';
     if(!x.working) h+='<div class="warn">'+esc(x.msg && !x.editable ? x.msg : 'Not a working day for this shift.')+'</div>';
     else if(!ed) h+='<div class="info">'+esc(x.msg)+(x.entered?'':' · nothing was entered')+'</div>';
-    var thr = x.damaged!=null ? Math.max(0,(x.damaged||0)-(x.helpers||0)) : '';
+    var thr = x.damaged!=null ? Math.max(0,(x.damaged||0)-(x.helpers||0)-(x.loss||0)) : '';
     /* v9.12: two blocks – In (with transfers first) and Out; saving needs in = out, with the storage room counted */
     h+='<div class="blk"><div class="bh">In – what you had today</div>'+
        '<div class="fl ro"><label>Left in storage from yesterday</label><b>'+x.opening+'</b></div>'+
@@ -1662,13 +1672,16 @@ function renderDaily(){
        (x.tIn?'<div class="fl ro xr"><label>+ Received from other schools</label><b>'+x.tIn+'</b></div>':'')+
        '<div class="fl ro xr tor hidden"><label>– Sent to other schools</label><b class="toutRo">0</b></div>'+
        '<div class="fl tot"><label>= Available to distribute</label><b class="avOut">–</b></div></div>'+
+       /* v9.17: students reached and the storage count always show; double portions, helpers, damaged / thrown and loss are added from a dropdown (lines with a saved figure open by themselves) */
        '<div class="blk"><div class="bh">Out – where every parcel went</div>'+
        flRow('Students reached','distributed',x.distributed==null?'':x.distributed-(x.dbl||0),dis)+
-       flRow('+ Double portions','dbl',x.dbl==null||!x.dbl?'':x.dbl,dis,'sub')+
-       '<div class="fl tot dist"><label>= Total distributed</label><b class="dtot">–</b></div>'+
+       xLine('dbl',x.dbl||'',dis,ed)+
+       '<div class="fl tot dist'+(x.dbl?'':' hidden')+'" data-xt="dbl"><label>= Total distributed</label><b class="dtot">–</b></div>'+
        flRow('Left in storage now (count it)','kept',x.kept==null?'':x.kept,dis)+
-       flRow('Given to helpers','helpers',x.helpers||'',dis)+
-       flRow('Damaged / thrown','thrown',thr||'',dis)+
+       xLine('helpers',x.helpers||'',dis,ed)+
+       xLine('thrown',thr||'',dis,ed)+
+       xLine('loss',x.loss||'',dis,ed,x.lossNote)+
+       (ed?'<div class="addl"><select onchange="xAdd(this)" aria-label="Add a line"></select></div>':'')+
        '<div class="fl tot"><label>= Total accounted for</label><b class="outT">–</b></div></div>'+
        '<div class="acct"></div>'+
        '<div class="pchk"></div>'+(ed?'<div class="pchkR hidden"><label>Reason for the difference (required)</label><select data-c="chkReason"><option value="">Select a reason</option>'+(r.chkReasons||[]).map(function(t){ return '<option'+(x.chkReason&&x.chkReason.indexOf(t)===0?' selected':'')+'>'+esc(t)+'</option>'; }).join('')+'</select>'+
@@ -1677,6 +1690,7 @@ function renderDaily(){
   });
   if(!h) h='<div class="info">No shift at this school on this day.</div>';
   $('dShifts').innerHTML=h;
+  document.querySelectorAll('#dShifts .shift').forEach(xOpts);
   S.xr={}; document.querySelectorAll('#dShifts select[id^=dTo_]').forEach(function(el){ pickInit(el.id); });
   var anyNotes=['AM','PM'].map(function(k){return r.shifts[k].notes;}).filter(String)[0]||'';
   $('dNotes').value=anyNotes; $('dNotes').disabled=!anyEdit;
@@ -1722,13 +1736,46 @@ function xferAdd(sh){
   d.querySelectorAll('select[id^=dTo_]').forEach(function(el){ pickInit(el.id); });
   calc();
 }
+/* v9.17: optional Out lines */
+var XL = { dbl:['+ Double portions','Double portions','A second snack given to students who already got one.'],
+  helpers:['Given to helpers','Given to helpers','Parcels given to school staff / helpers.'],
+  thrown:['Damaged / thrown<small class="rnote">small quantities only – for larger quantities call Mohamad Houshaimy for a return</small>','Damaged / thrown (small qty)',''],
+  loss:['Loss<small class="rnote">miscount at reception – the waybill was signed for the full quantity</small>','Loss (miscount, waybill signed)','Do not change “received”: the waybill was signed. Report the missing parcels here with a short note.'] };
+function xLine(f,val,dis,ed,note){
+  var on=+val>0, L=XL[f];
+  return '<div class="xl'+(on?'':' hidden')+'" data-x="'+f+'"><div class="fl'+(f==='dbl'?' sub':'')+'"><label>'+L[0]+'</label><span class="xin2"><input type="number" inputmode="numeric" min="0" data-f="'+f+'" value="'+val+'"'+dis+' placeholder="0" oninput="calc()">'+
+    (ed?'<button type="button" class="xrm" title="Remove this line" onclick="xOff(this)">✕</button>':'')+'</span></div>'+
+    (f==='loss'?'<input class="lnote" data-c="lossNote" placeholder="Note (required), e.g. 12 parcels short, waybill signed for the full quantity" value="'+esc(note||'')+'"'+dis+' oninput="calc()">':'')+
+    (f==='thrown'?'<div class="d10 hidden"></div>':'')+'</div>';
+}
+function xOpts(box){
+  var sel=box.querySelector('.addl select'); if(!sel) return;
+  var h='<option value="">+ Add a line…</option>';
+  box.querySelectorAll('.xl.hidden').forEach(function(el){ var f=el.dataset.x; h+='<option value="'+f+'">'+XL[f][1]+'</option>'; });
+  sel.innerHTML=h; sel.parentNode.classList.toggle('hidden', !box.querySelector('.xl.hidden'));
+}
+function xAdd(sel){
+  var f=sel.value; if(!f) return;
+  var box=sel.closest('.shift'), el=box.querySelector('.xl[data-x="'+f+'"]');
+  el.classList.remove('hidden'); if(f==='dbl'){ var t=box.querySelector('[data-xt=dbl]'); if(t) t.classList.remove('hidden'); }
+  xOpts(box);
+  var tip=XL[f][2]; if(tip && !el.querySelector('.xtip')){ var d=document.createElement('div'); d.className='mini xtip'; d.textContent=tip; el.appendChild(d); }
+  var i=el.querySelector('input[data-f]'); if(i) i.focus();
+  calc();
+}
+function xOff(btn){
+  var el=btn.closest('.xl'), box=btn.closest('.shift');
+  el.querySelectorAll('input').forEach(function(i){ i.value=''; });
+  el.classList.add('hidden'); if(el.dataset.x==='dbl'){ var t=box.querySelector('[data-xt=dbl]'); if(t) t.classList.add('hidden'); }
+  xOpts(box); calc();
+}
 function flRow(label,f,val,dis,cls){ return '<div class="fl'+(cls?' '+cls:'')+'"><label>'+label+'</label><input type="number" inputmode="numeric" min="0" data-f="'+f+'" value="'+val+'"'+dis+(f==='dbl'||f==='helpers'||f==='thrown'?' placeholder="0"':f==='kept'?' placeholder="count"':'')+' oninput="calc()"></div>'; }
 /* v9.6: every parcel accounted for – distributed + helpers + damaged / thrown + kept + transferred out = leftover from before + received + transferred in */
 function acct(x,v){ // v9.12: available = left from yesterday + received + transferred in – transferred out; must equal distributed + kept (counted) + helpers + thrown
-  var av=x.opening+(+v.received||0)+(x.tIn||0)-(+v.tOut||0), out=(+v.distributed||0)+(+v.kept||0)+(+v.helpers||0)+(+v.thrown||0);
+  var av=x.opening+(+v.received||0)+(x.tIn||0)-(+v.tOut||0), out=(+v.distributed||0)+(+v.kept||0)+(+v.helpers||0)+(+v.thrown||0)+(+v.loss||0); // v9.17: loss
   return { av:av, out:out, diff:av-out, left:av-out, ready: v.received!=='' && v.distributed!=='' && v.kept!=='' };
 }
-function vals(box){ var o={}; box.querySelectorAll('input[data-f]').forEach(function(el){ o[el.dataset.f]=el.value; }); box.querySelectorAll('[data-c]').forEach(function(el){ o[el.dataset.c]=el.value; }); o.damaged=String((+o.helpers||0)+(+o.thrown||0)); if(o.distributed!=='') o.distributed=String((+o.distributed||0)+(+o.dbl||0));
+function vals(box){ var o={}; box.querySelectorAll('input[data-f]').forEach(function(el){ o[el.dataset.f]=el.value; }); box.querySelectorAll('[data-c]').forEach(function(el){ o[el.dataset.c]=el.value; }); o.damaged=String((+o.helpers||0)+(+o.thrown||0)+(+o.loss||0)); if(o.loss===undefined) o.loss=''; if(o.distributed!=='') o.distributed=String((+o.distributed||0)+(+o.dbl||0));
   o.tList=xferRows(box); o.tOut=String(o.tList.reduce(function(a,t){ return a+(+t.qty||0); },0)); return o; }
 /* v9.1 plan check: distributed + leftover + damaged must equal planned + leftover from before */
 function planChk(x, v){
@@ -1752,7 +1799,7 @@ function calc(){
     var sr=box.querySelector('input[data-f=distributed]'); if(sr) sr.parentNode.classList.toggle('neg', v.distributed!=='' && reach>x.students); // students reached above enrolment
     var ac=box.querySelector('.acct');
     if(ac){
-      var started = v.distributed!=='' || v.kept!=='' || v.helpers!=='' || v.thrown!=='' || v.dbl!=='';
+      var started = v.distributed!=='' || v.kept!=='' || v.helpers!=='' || v.thrown!=='' || v.dbl!=='' || v.loss!=='';
       if(v.received==='' && !started){ ac.className='acct wait'; ac.textContent=''; }
       else if(a.diff<0){ ac.className='acct bad'; ac.textContent='⚠ '+(-a.diff)+' parcel'+(a.diff<-1?'s':'')+' more than available (available '+a.av+', entered so far '+a.out+'). Check the figures.'; } // v9.12c: flagged at once, before the count is entered
       else if(!a.ready){ ac.className='acct wait'; ac.textContent = a.diff+' parcel'+(a.diff===1?'':'s')+' still to account for – fill students reached and count the storage room.'; }
@@ -1762,6 +1809,11 @@ function calc(){
     var pc=planChk(x,v), pb=box.querySelector('.pchk'), pr=box.querySelector('.pchkR');
     if(pb){ pb.className='pchk'+(pc&&pc.bad?' bad':pc&&pc.txt?' good':''); pb.textContent = pc&&pc.txt ? (pc.bad?'⚠ Does not match the plan: ':pc.info?'ℹ Differs from the plan: ':'✓ Matches the plan: ')+pc.txt : ''; }
     if(pr) pr.classList.toggle('hidden', !(pc&&pc.bad));
+    /* v9.17: damaged / thrown above 10% of received (or of available when nothing was received) → call Mohamad for a return */
+    var d10=box.querySelector('.d10'), thr=+v.thrown||0, base=(+v.received||0)||a.av;
+    if(d10){ var big=thr>0 && base>0 && thr>0.1*base; d10.classList.toggle('hidden',!big); d10.closest('.xl').classList.toggle('amb',big);
+      if(big) d10.textContent='More than 10% of what you '+((+v.received||0)?'received':'had')+' ('+thr+' of '+base+'). Call Mohamad Houshaimy before saving so he can arrange a return.'; }
+    var ln=box.querySelector('.lnote'); if(ln) ln.classList.toggle('need', +v.loss>0 && !String(v.lossNote||'').trim());
   });
   var bad=Array.prototype.some.call(document.querySelectorAll('#dShifts .acct'),function(e){ return e.classList.contains('bad'); });
   var sv=$('dSave'); if(sv) sv.classList.toggle('blocked', bad);
@@ -1780,6 +1832,8 @@ function saveDaily(){
     v.tList=v.tList.filter(function(t){ return +t.qty>0; }); delete v.tTo;
     var a=acct(x,v); if(a.diff!==0){ err=sh+': '+(a.diff>0? a.diff+' parcel'+(a.diff>1?'s':'')+' not accounted for' : (-a.diff)+' parcel'+(a.diff<-1?'s':'')+' more than available')+' – available '+a.av+', accounted for '+a.out+'. Count again.'; return; }
     if((+v.dbl||0)>(+v.distributed)-(+v.dbl||0)) err=sh+': double portions cannot be more than the students who got a snack.';
+    if(+v.loss>0 && !String(v.lossNote||'').trim()){ err=sh+': add a short note for the loss (e.g. miscounted at reception, waybill signed for the full quantity).'; return; }
+    var b10=(+v.received||0)||a.av; if(+v.thrown>0 && b10>0 && +v.thrown>0.1*b10) warn.push(sh+': damaged / thrown ('+v.thrown+') is more than 10% of '+b10+'. Did you call Mohamad Houshaimy for a return?');
     if((+v.distributed)-(+v.dbl||0)>x.students) warn.push(sh+': students reached is above enrolment ('+x.students+').');
     var pc=planChk(x,v); if(pc&&pc.bad){ if(!v.chkReason){ err=sh+': the figures do not match the plan – choose a reason for the difference.'; return; } if(/^Other/.test(v.chkReason)&&!String(v.chkNote||'').trim()){ err=sh+': explain the difference in the details box.'; return; } } else { v.chkReason=''; v.chkNote=''; }
     v.notes=$('dNotes').value.trim(); data[sh]=v;
@@ -1869,7 +1923,7 @@ document.addEventListener('keydown',function(e){
 
 /* ---------- dashboard (v9.0): Project Manager, MEAL and WFP – view only ----------
    One server call per modality + period (apiDash). Area, district, kitchen, type and school are filtered here on the phone. */
-var D = { mod:'snacks', period:'week', ds:'', area:'', caza:'', type:'', kid:'', sid:'', trend:'qty', by:'cov', sort:'', dir:1, d:null, charts:[], drill:[], rows:[] };
+var D = { mod:'snacks', period:'week', ds:'', area:'', caza:'', type:'', kid:'', sid:'', shift:'', trend:'qty', by:'cov', sort:'', dir:1, d:null, charts:[], drill:[], rows:[] };
 var DMF=['January','February','March','April','May','June','July','August','September','October','November','December'];
 function dbN(v){ return v==null||isNaN(v) ? '–' : Math.round(v).toLocaleString('en-GB'); }
 function dbC(v){ v=+v||0; var a=Math.abs(v); return a>=1e6 ? (v/1e6).toFixed(1).replace(/\.0$/,'')+'M' : a>=1e4 ? Math.round(v/1e3)+'K' : a>=1e3 ? (v/1e3).toFixed(1).replace(/\.0$/,'')+'K' : String(Math.round(v)); }
@@ -1897,7 +1951,7 @@ function dbSegs(){
 function dbSet(k,v){
   if(D[k]===v) return;
   D[k]=v;
-  if(k==='mod'){ D.kid=''; D.type=''; D.sid=''; D.d=null; }
+  if(k==='mod'){ D.kid=''; D.type=''; D.sid=''; D.shift=''; D.d=null; }
   if(k==='period' && D.ds>todayLocal()) D.ds=todayLocal();
   D.sort=''; dbSegs(); dbWhenOpts(); dbLoad();
 }
@@ -1927,7 +1981,8 @@ function dbWhenOpts(){
 function dbWhen(v){ if(!v) return; D.ds=v; dbLoad(); }
 function dbArgs(){
   var ds = D.period==='week' ? dbMon(D.ds) : D.period==='month' ? D.ds.substr(0,7)+'-01' : D.period==='day' ? D.ds : '';
-  return [S.uid,S.pin,{mod:D.mod, period:D.period, ds:ds}];
+  var o={mod:D.mod, period:D.period, ds:ds}; if(D.shift) o.shift=D.shift; // v9.17: AM / PM
+  return [S.uid,S.pin,o];
 }
 function dbLoad(fresh){
   show($('dbErr'),'');
@@ -1955,6 +2010,13 @@ function dbFilters(){
   types=types.filter(function(t){ return !t[0] || L.some(function(s){return s.t===t[0];}); });
   if(!types.some(function(t){return t[0]===D.type;})) D.type='';
   $('dbType').innerHTML=types.map(function(t){ return '<option value="'+t[0]+'">'+t[1]+'</option>'; }).join(''); $('dbType').value=D.type;
+  /* v9.17: visible toggles – type of school and shift */
+  var short={'':'All schools','S':'In-school','N':'Nearby','K':'Kitchen schools'};
+  $('dbTypeSeg').innerHTML = types.length>2 ? types.map(function(t){ return '<button class="'+(D.type===t[0]?'on':'')+'" onclick="dbScope(\'type\',\''+t[0]+'\')">'+short[t[0]]+'</button>'; }).join('') : '';
+  $('dbTypeSeg').classList.toggle('hidden', types.length<=2);
+  var shs=D.d.allShifts||['AM'];
+  $('dbShiftSeg').innerHTML = shs.length>1 ? [['','AM + PM']].concat(shs.map(function(x){ return [x,x]; })).map(function(x){ return '<button class="'+(D.shift===x[0]?'on':'')+'" onclick="dbSet(\'shift\',\''+x[0]+'\')">'+x[1]+'</button>'; }).join('') : '';
+  $('dbShiftSeg').classList.toggle('hidden', shs.length<=1);
   var sl=dbList(true);
   if(D.sid && !sl.some(function(s){return s.id===D.sid;})) D.sid='';
   $('dbSchool').innerHTML='<option value="">All schools in the selection ('+sl.length+')</option>'+sl.map(function(s){
@@ -1980,16 +2042,18 @@ function dbTot(s){
   t[pk]=s.pk||0; return t;
 }
 function dbAgg(list){
-  var n=D.d.fields.length, T=dbZero(n), B=D.d.buckets.map(function(){ return dbZero(n); }), per={}, avg=0, st=0, left=0;
+  var n=D.d.fields.length, T=dbZero(n), B=D.d.buckets.map(function(){ return dbZero(n); }), per={}, avg=0, st=0, left=0, rg=0, nrg=0;
   var a1=dbF(D.mod==='snacks'||dbF('re')>=0?'re':'d'), a2=dbF('fd');
   list.forEach(function(s){
-    var t=dbTot(s); per[s.id]=t; st+=s.st; left+=s.left||0;
+    var t=dbTot(s); per[s.id]=t; st+=s.st; left+=s.left||0; var g=dbRg(s); if(g!=null){ rg+=g; nrg++; }
     for(var i=0;i<n;i++) T[i]+=t[i];
     Object.keys(s.b).forEach(function(b){ var a=s.b[b], x=B[+b]; for(var i=0;i<n;i++) x[i]+=a[i]; });
     if(t[a2]) avg+=t[a1]/t[a2];
   });
-  return { T:T, B:B, per:per, avg:avg, st:st, left:left, n:list.length };
+  return { T:T, B:B, per:per, avg:avg, st:st, left:left, n:list.length, rg:rg, nrg:nrg };
 }
+/* v9.17: registered students of a school (Registration, follows the AM / PM filter); null when not entered */
+function dbRg(s){ var a=(D.d.reg||{})[s.id]; return a ? a.lb+a.lg+a.nb+a.ng : null; }
 /* reported share: closed school days + days already reported early */
 function dbRep(t){ var rw=dbV(t,'rw'), den=dbV(t,'due')+rw-dbV(t,'rep'); return { n:rw, d:den, p:dbP(rw,den), open:Math.max(0,dbV(t,'wd')-den) }; }
 function dbCov(t){ return D.mod==='snacks'||dbF('re')>=0 ? dbP(dbV(t,'re'),dbV(t,'en')) : dbP(dbV(t,'d'),dbV(t,'en')); } // v9.9: kitchens use students reached too
@@ -2037,7 +2101,10 @@ function dbSchoolCard(s){
   var bits=[esc(s.v), esc(s.c)+(s.a?' · '+esc(s.a):''), 'Monitor: '+esc(s.mon||'–')+(s.po?' · PO: '+esc(s.po):'')];
   var mod = D.mod==='snacks' ? (s.t==='N' ? 'Nearby school on snacks'+(s.sf?' from '+dLabel(s.sf)+(s.su?' to '+dLabel(s.su):''):'') : 'In-school snacks') : (s.t==='K' ? 'School kitchen' : 'Nearby school – sandwiches from '+(s.kn||'the kitchen'));
   return '<div class="card"><button class="sback" onclick="dbScope(\'sid\',\'\')">← All schools in the selection</button><div class="school" dir="auto">'+esc(s.n)+'</div>'+
-    '<div class="meta">'+bits.join(' · ')+'</div><div class="chips"><span class="chip">'+esc(mod)+'</span><span class="chip">Enrolled: <b>'+dbN(s.st)+'</b></span><span class="chip">'+esc(s.id)+'</span></div></div>';
+    '<div class="meta">'+bits.join(' · ')+'</div><div class="chips"><span class="chip">'+esc(mod)+'</span><span class="chip">Enrolled: <b>'+dbN(s.st)+'</b></span><span class="chip">Registered: <b>'+(dbRg(s)==null?'not entered':dbN(dbRg(s)))+'</b></span>'+(D.shift?'<span class="chip">'+D.shift+' only</span>':'')+'<span class="chip">'+esc(s.id)+'</span></div></div>';
+}
+function dbRgKpi(A){ // v9.17: registered students (Registration tile entries), next to enrolment
+  return dbKpi('Registered students', A.nrg?dbN(A.rg):'–', A.nrg ? dbPs(dbP(A.rg,A.st))+' of '+dbN(A.st)+' enrolled'+(A.n>1?' · '+A.nrg+' of '+A.n+' schools entered':'') : 'no registration entered yet'+(A.n>1?' for these schools':''));
 }
 function dbKpi(l, v, sub, hero){ return '<div class="kpi'+(hero?' hero':'')+'"><div class="kl">'+l+'</div><div class="kv">'+v+'</div>'+(sub?'<div class="ks">'+sub+'</div>':'')+'</div>'; }
 function dbKpis(A){
@@ -2047,16 +2114,18 @@ function dbKpis(A){
     var pk=dbV(T,'pk'), pp=dbV(T,'pp'), p=dbV(T,'p');
     h+=dbKpi(day?'Students reached':'Students reached', dbN(pk), (day?'on this day':D.sid?'highest number reached on one day':'highest number reached on one day, per school, added up')+' · '+dbPs(dbP(pk,A.st))+' of '+dbN(A.st)+' enrolled', true);
     h+=dbKpi('Coverage '+dbStat(cov), dbPs(cov), 'students reached ÷ students enrolled, on school days');
+    h+=dbRgKpi(A);
     h+=dbKpi('Reporting '+dbStat(R.p,95,80), dbPs(R.p), repSub);
     if(!day) h+=dbKpi('Average reached per day', dbN(A.avg), D.sid?'per day with snacks':'per day with snacks, all schools added up');
     h+=dbKpi('Parcels distributed', dbN(dbV(T,'d')), dbV(T,'db') ? 'incl. '+dbN(dbV(T,'db'))+' double portions' : 'received '+dbN(dbV(T,'r')));
     h+=dbKpi('Received vs planned', dbPs(dbP(dbV(T,'r'),pp)), 'received '+dbN(dbV(T,'r'))+' of '+dbN(pp)+' planned'+(p>pp?' · '+dbN(p-pp)+' more planned after today':''));
     h+=dbKpi('Leftover in schools', dbN(A.left), 'parcels in the school stores '+(D.d.to<D.d.today?'at the end of the period':'now'));
-    h+=dbKpi('Damaged / to helpers', dbN(dbV(T,'x')), (dbF('hp')>=0 && dbV(T,'x') ? 'to helpers '+dbN(dbV(T,'hp'))+' · damaged '+dbN(dbV(T,'x')-dbV(T,'hp'))+' · ' : '')+(dbV(T,'od') ? dbV(T,'od')+' school day'+(dbV(T,'od')>1?'s':'')+' above enrolment' : 'no day above enrolment'));
+    h+=dbKpi('Helpers, damaged and loss', dbN(dbV(T,'x')), (dbF('hp')>=0 && dbV(T,'x') ? 'to helpers '+dbN(dbV(T,'hp'))+' · damaged '+dbN(dbV(T,'x')-dbV(T,'hp')-(dbF('ls')>=0?dbV(T,'ls'):0))+(dbF('ls')>=0&&dbV(T,'ls')?' · loss (miscount) '+dbN(dbV(T,'ls')):'')+' · ' : '')+(dbV(T,'od') ? dbV(T,'od')+' school day'+(dbV(T,'od')>1?'s':'')+' above enrolment' : 'no day above enrolment'));
   } else {
     var kp=dbV(T,'pk'), prep=dbV(T,'p'), conf=dbV(T,'conf');
     h+=dbKpi('Students reached', dbN(kp), (day?'on this day':D.sid?'highest number reached on one day':'highest number reached on one day, per school, added up')+' · '+dbPs(dbP(kp,A.st))+' of '+dbN(A.st)+' enrolled', true);
     h+=dbKpi('Coverage '+dbStat(cov), dbPs(cov), 'students reached ÷ students enrolled, on school days');
+    h+=dbRgKpi(A);
     h+=dbKpi('Orders sent '+dbStat(R.p,95,80), dbPs(R.p), repSub.replace('reported','with an order')+(dbV(T,'late')?' · '+dbV(T,'late')+' late':''));
     if(!day) h+=dbKpi('Average reached per day', dbN(A.avg), D.sid?'students per day with sandwiches':'students per day with sandwiches, all schools added up');
     h+=dbKpi('Sandwiches distributed', dbN(dbV(T,'d')), (dbV(T,'db')?'incl. '+dbN(dbV(T,'db'))+' double portions · ':'')+'prepared '+dbN(prep)+' · ordered '+dbN(dbV(T,'o')));
@@ -2199,10 +2268,10 @@ function dbFollow(list, A){
 function dbCols(){
   var day=D.d.period==='day';
   if(D.mod==='snacks') return [
-    ['st','Enrolled',function(s,t){return s.st;}], ['pk',day?'Reached':'Reached*',function(s,t){return dbV(t,'pk');}], ['d','Distributed',function(s,t){return dbV(t,'d');}],
+    ['st','Enrolled',function(s,t){return s.st;}], ['rg','Registered',function(s,t){return s.rg!==undefined?s.rg:dbRg(s);}], ['pk',day?'Reached':'Reached*',function(s,t){return dbV(t,'pk');}], ['d','Distributed',function(s,t){return dbV(t,'d');}],
     ['cov','Coverage',function(s,t){return dbCov(t);},'%'], ['rep',day?'Report':'Reported',function(s,t){return dbRep(t).p;},'rep'], ['left','Leftover',function(s,t){return s.left;}] ];
   return [
-    ['st','Enrolled',function(s,t){return s.st;}], ['pk',day?'Reached':'Reached*',function(s,t){return dbV(t,'pk');}], ['p','Prepared',function(s,t){return dbV(t,'p');}],
+    ['st','Enrolled',function(s,t){return s.st;}], ['rg','Registered',function(s,t){return s.rg!==undefined?s.rg:dbRg(s);}], ['pk',day?'Reached':'Reached*',function(s,t){return dbV(t,'pk');}], ['p','Prepared',function(s,t){return dbV(t,'p');}],
     ['d','Distributed',function(s,t){return dbV(t,'d');}], ['l','Leftover',function(s,t){return dbV(t,'l');}], ['cov','Coverage',function(s,t){return dbCov(t);},'%'], ['rep',day?'Order':'Orders',function(s,t){return dbRep(t).p;},'rep'] ];
 }
 function dbRepCell(t){
@@ -2227,7 +2296,7 @@ function dbTable(list, A){
       cols.map(function(c){ var v=c[2](s,t); return '<td>'+(c[3]==='rep' ? dbRepCell(t) : c[3]==='%' ? dbPs(v) : dbN(v))+'</td>'; }).join('')+'</tr>';
   });
   var T=A.T;
-  h+='<tr class="tt"><td>Total ('+rows.length+')</td>'+cols.map(function(c){ var v=c[2]({st:A.st,left:A.left},T); return '<td>'+(c[3]==='rep' ? (D.d.period==='day' ? dbRep(T).n+'/'+dbRep(T).d : dbPs(v)) : c[3]==='%' ? dbPs(v) : dbN(v))+'</td>'; }).join('')+'</tr>';
+  h+='<tr class="tt"><td>Total ('+rows.length+')</td>'+cols.map(function(c){ var v=c[2]({st:A.st,left:A.left,rg:A.nrg?A.rg:null},T); return '<td>'+(c[3]==='rep' ? (D.d.period==='day' ? dbRep(T).n+'/'+dbRep(T).d : dbPs(v)) : c[3]==='%' ? dbPs(v) : dbN(v))+'</td>'; }).join('')+'</tr>';
   return h+'</table></div><div class="dbnote">'+(D.d.period==='day'?'':'* Reached = highest number on one day in the period. ')+'Tap a column to sort, a school to open it.'+(D.mod==='snacks'&&list.some(function(s){return s.t==='N';})?' Orange rows = nearby schools on snacks.':'')+'</div></div>';
 }
 /* ---- day by day (or week by week) table – the table view of the chart ---- */
@@ -2435,22 +2504,24 @@ function wMenuDel(id,from){
 function wRetHtml(){
   var r=W.d, h='<div class="card"><h2>Returns – '+esc(r.label)+'</h2>';
   if(r.returns.length) h+=r.returns.map(function(e){
-    return '<div class="req'+(e.status==='Cancelled'?' wcan':'')+'"><b dir="auto">'+esc(e.name)+'</b> · '+e.id+(e.status==='Cancelled'?' · <b>cancelled</b>':'')+'<br>'+esc(e.items.join(', '))+(e.whole?' · <b>'+e.whole+' whole parcels</b>':' · some items only')+
+    return '<div class="req'+(e.status==='Cancelled'?' wcan':'')+'"><b dir="auto">'+esc(e.name)+'</b> · '+e.id+(e.status==='Cancelled'?' · <b>cancelled</b>':'')+'<br><span class="st '+(e.credit?'y':'n')+'">'+esc(e.credit?'Quality credit – already distributed':'Collected before distribution')+'</span><br>'+esc(e.items.join(', '))+(e.whole?' · <b>'+e.whole+' whole parcels</b>':' · some items only')+
       '<br>'+esc(e.reason)+(e.note?' – '+esc(e.note):'')+'<br><span class="meta">'+esc(e.by)+' · '+esc(e.at)+'</span>'+
-      (r.canReturn&&!r.locked&&e.status!=='Cancelled'?'<div class="act"><button class="btn sec" onclick="wRetCancel(\''+e.id+'\')">Cancel this return</button></div>':'')+'</div>';
+      (r.canReturn&&!r.locked&&e.status!=='Cancelled'?'<div class="act"><button class="btn sec" onclick="wRetType(\''+e.id+'\','+(e.credit?0:1)+')">'+(e.credit?'Change to: collected before distribution':'Change to: quality credit (already distributed)')+'</button><button class="btn sec" onclick="wRetCancel(\''+e.id+'\')">Cancel this return</button></div>':'')+'</div>';
   }).join(''); else h+='<div class="meta">No return on this day.</div>';
   h+='</div>';
   if(r.canReturn && !r.locked && !r.isFuture && r.schools.length){
     h+='<div class="card"><h2>New return</h2><div class="meta">Tick what came back and how many. If every item of the day\'s menu comes back, those parcels are taken off what the school received; if only some items come back (e.g. pears back, milk given), the parcels still count as received.</div>'+
       '<label for="wRS">School</label><select id="wRS" onchange="W.rsid=this.value;wRetSync()"><option value="">Select a school ('+r.schools.length+')</option>'+
       r.schools.map(function(s){ return '<option value="'+s.id+'|'+s.shift+'" data-q="'+esc(s.monitor+' '+s.id)+'"'+(W.rsid===s.id+'|'+s.shift?' selected':'')+'>'+esc(s.name)+' – '+esc(s.village)+' · '+s.qty+' parcels'+(s.shift!=='AM'?' · '+s.shift:'')+'</option>'; }).join('')+'</select>'+
+      '<label>What happened</label><div class="radio wrt"><label><input type="radio" name="wRT" value="c" checked onchange="wRetCalc()"> Collected before distribution<small>the parcels came back – they come off what the school received</small></label>'+
+      '<label><input type="radio" name="wRT" value="q" onchange="wRetCalc()"> Quality credit – already distributed<small>e.g. mould found after the children got it; the supplier accepted it – only the waybill changes, the school\'s figures stay</small></label></div>'+
       '<div id="wRItems"></div>'+
       '<label for="wRR">Reason</label><select id="wRR"><option value="">Select a reason</option>'+r.reasons.map(function(t){return '<option>'+esc(t)+'</option>';}).join('')+'</select>'+
       '<label for="wRN">Note</label><input id="wRN" placeholder="e.g. pears soft and bruised – checked with the food safety officer">'+
       '<button class="btn" onclick="wRetSave()">Save return</button></div>';
   }
   if(r.schools.length) h+='<div class="card"><h2>Schools on this day</h2><div class="tw"><table class="dt"><tr><th>School</th><th>Ordered</th><th>Delivered</th><th>Returned</th><th>Received</th><th>Monitor</th></tr>'+
-    r.schools.map(function(s){ return '<tr><td class="nm"><b dir="auto">'+esc(s.name)+'</b><small>'+esc(s.monitor)+' · '+esc(s.menu)+'</small></td><td>'+s.qty+'</td><td>'+s.arrived+(s.aStatus==='pending'?' ⏳':s.aStatus==='approved'?' ✓':'')+'</td><td>'+(s.whole||'')+
+    r.schools.map(function(s){ return '<tr><td class="nm"><b dir="auto">'+esc(s.name)+'</b><small>'+esc(s.monitor)+' · '+esc(s.menu)+'</small></td><td>'+s.qty+'</td><td>'+s.arrived+(s.aStatus==='pending'?' ⏳':s.aStatus==='approved'?' ✓':'')+'</td><td>'+(s.whole||'')+(s.cWhole?' <small class="mini">+'+s.cWhole+' quality credit</small>':'')+
       (s.items.some(function(i){return i.ret;})?'<small class="mini"> '+s.items.filter(function(i){return i.ret;}).map(function(i){return esc(i.it)+' '+i.ret;}).join(', ')+'</small>':'')+'</td><td>'+s.expected+'</td><td>'+(s.saved==null?'–':s.notice?'<b class="overt">'+s.saved+' ⚠</b>':s.saved)+'</td></tr>'; }).join('')+
     '</table></div><div class="dbnote">Delivered ⏳ = a different number reported by the monitor, waiting for approval. Monitor ⚠ = the monitor saved another received figure and is asked to correct it.</div></div>';
   return h;
@@ -2477,6 +2548,8 @@ function wRetCalc(){
   var x=wRetSel(), s=x.s, el=$('wRWhole'); if(!s||!el) return;
   var main=s.items.filter(function(i){return i.main;}), got={}; x.list.forEach(function(i){ got[i.it]=(got[i.it]||0)+i.q; });
   var whole = main.length && main.every(function(i){ return got[i.it]>0; }) ? Math.min.apply(null, main.map(function(i){ return got[i.it]; })) : 0;
+  var q=document.querySelector('input[name=wRT]:checked'), cr=q&&q.value==='q';
+  if(cr){ el.innerHTML = !x.list.length ? 'Tick the items covered by the credit.' : (whole?'<b>'+whole+' whole parcels</b>':'Some items')+' come off the waybill only. The school keeps its figures (they were distributed) – the monitor is not asked to correct anything.'; return; }
   el.innerHTML = !x.list.length ? 'Tick the items that came back.' : whole ? '<b>'+whole+' whole parcels</b> come off what the school received ('+s.expected+' → '+Math.max(0,s.expected-whole)+').'+(s.saved!=null?' The monitor already saved this day and will be asked to correct it.':'') :
     'Only some items – the parcels still count as received at the school. The waybill\'s Return tab shows the items.';
 }
@@ -2487,11 +2560,20 @@ function wRetSave(){
   if(!x.list.length){ show($('wErr'),'Tick at least one item and enter how many came back.'); return; }
   if(x.list.some(function(i){ return !(i.q>0); })){ show($('wErr'),'Enter the quantity for each ticked item.'); return; }
   if(!rs){ show($('wErr'),'Choose the reason.'); return; }
-  if(!confirm(x.s.name+': return '+x.list.map(function(i){return i.it+' '+i.q;}).join(', ')+' on '+W.d.label+'. Save?')) return;
+  var tq=document.querySelector('input[name=wRT]:checked'), ty=tq&&tq.value==='q'?'Quality credit – already distributed':'Collected before distribution';
+  if(!confirm(x.s.name+': '+(tq&&tq.value==='q'?'quality credit':'return')+' '+x.list.map(function(i){return i.it+' '+i.q;}).join(', ')+' on '+W.d.label+'. Save?')) return;
   busy(true);
-  call('apiWhReturn',S.uid,S.pin,W.d.ds,x.s.id,x.s.shift,x.list.map(function(i){return {it:i.it,q:i.q};}),rs,nt).then(function(res){
+  call('apiWhReturn',S.uid,S.pin,W.d.ds,x.s.id,x.s.shift,x.list.map(function(i){return {it:i.it,q:i.q};}),rs,nt,ty).then(function(res){
     W.rsid='';
+    if(res.credit){ wFresh('Quality credit saved ('+res.id+')'+(res.whole?': '+res.whole+' whole parcels':'')+' – off the waybill only; the school\'s figures stay.'); return; }
     wFresh('Return saved ('+res.id+')'+(res.whole?': '+res.whole+' whole parcels – received at the school is now '+res.expected+'.':' – some items only, received at the school unchanged.')+(res.notice?' The monitor saved '+res.saved+' before – they are asked to correct the day.':''));
+  }).catch(function(e){ busy(false); show($('wErr'),e); window.scrollTo(0,0); });
+}
+function wRetType(id,toCredit){
+  var why=prompt((toCredit?'Change to quality credit (already distributed)':'Change to collected before distribution')+' – reason:'); if(!why) return;
+  busy(true);
+  call('apiWhReturnType',S.uid,S.pin,id,toCredit?'Quality credit – already distributed':'Collected before distribution',why).then(function(r){
+    wFresh(id+': '+(toCredit?'now a quality credit – the school\'s received is back to '+r.expected+'.':'now collected before distribution – received at the school is '+r.expected+'.')+(r.notice?' The monitor saved '+r.saved+' and is asked to correct the day.':''));
   }).catch(function(e){ busy(false); show($('wErr'),e); window.scrollTo(0,0); });
 }
 function wRetCancel(id){
@@ -2507,6 +2589,8 @@ function rcvBlock(sh,x,ed){
   h+=flRow('= Received from the supplier','received',d.expected,' readonly tabindex="-1"','lockd');
   var ri=Object.keys(d.retItems||{}).filter(function(k){ return d.retItems[k]; });
   if(ri.length) h+='<div class="mini">Items returned: '+ri.map(function(k){ return esc(k)+' '+d.retItems[k]; }).join(', ')+(d.whole?'':' – only some items, so the parcels still count as received')+'</div>';
+  var ci=Object.keys(d.cItems||{}).filter(function(k){ return d.cItems[k]; }); // v9.17
+  if(ci.length || d.cWhole) h+='<div class="mini">ℹ Quality credit (already distributed): '+(d.cWhole?d.cWhole+' parcels · ':'')+ci.map(function(k){ return esc(k)+' '+d.cItems[k]; }).join(', ')+' – recorded by the warehouse for the supplier\'s payment only. Your figures stay as they are.</div>';
   if(x.canReq && x.working) h+='<details class="xtab rq"><summary>Different number delivered? <span class="xsum">'+(d.aStatus==='pending'?'waiting for approval':'tap to report')+'</span></summary><div class="xbody">'+
     '<div class="mini xs">Count the parcels the supplier left at the school. The warehouse monitor approves it – until then you can save the day with your number, marked pending.</div>'+
     '<div class="row2"><div><label>Parcels delivered</label><input type="number" inputmode="numeric" min="0" id="rq_'+sh+'"></div><div><label>Reason</label><select id="rqr_'+sh+'"><option value="">Select</option>'+
