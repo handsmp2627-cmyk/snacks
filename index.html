@@ -1191,6 +1191,7 @@ function cellHtml(d,sh,i,students){
   if(c.status==='Changed') { cls+=' chg'; tag='changed'; }
   if(c.status==='Override') { cls+=' ovr'; tag='override'; }
   if(c.qty!=null && c.qty>students){ cls+=' over'; tag='above '+students; }
+  if(c.pending){ cls+=' chg'; tag='⏳ '+c.pending.qty+' to approve'; } // v9.20: change waiting for the warehouse monitor
   var val=c.qty==null?'':c.qty;
   if(!c.working && c.qty==null && !canEdit) val='';
   return '<td><div class="'+cls+'" id="c_'+sh+'_'+i+'"><input type="number" inputmode="numeric" min="0" step="1" data-sh="'+sh+'" data-i="'+i+'" data-orig="'+val+'" value="'+val+'"'+dis+
@@ -1234,11 +1235,18 @@ function savePlan(){
   busy(true);
   call('apiSavePlan',S.uid,S.pin,s.id,S.plan.week,entries,need?$('pReason').value:'',$('pNote').value.trim()).then(function(r){
     busy(false); $('pNote').value=''; $('pReason').value='';
-    show($('pOk'),'Saved '+r.saved+' figure(s)'+(r.flagged?' – marked as changed with your reason.':'.'));
+    show($('pOk'),planMsg(r));
     $('pNext').classList.remove('hidden');
     call('apiStatus',S.uid,S.pin,$('pWeek').value,S.now.ds).then(function(st){ schoolOpts($('pSchool'),st,'p'); });
-    return call('apiGetPlan',S.uid,S.pin,s.id,S.plan.week).then(function(x){ cPut(cKey('apiGetPlan',[S.uid,S.pin,s.id,S.plan.week]),x); S.plan=x; renderPlan(); show($('pOk'),'Saved '+r.saved+' figure(s)'+(r.flagged?' – marked as changed with your reason.':'.')); $('pNext').classList.remove('hidden'); });
+    return call('apiGetPlan',S.uid,S.pin,s.id,S.plan.week).then(function(x){ cPut(cKey('apiGetPlan',[S.uid,S.pin,s.id,S.plan.week]),x); S.plan=x; renderPlan(); show($('pOk'),planMsg(r)); $('pNext').classList.remove('hidden'); });
   }).catch(function(e){ busy(false); show($('pErr'),e); });
+}
+/* v9.20: changes to locked days go to the warehouse monitor */
+function planMsg(r){
+  var p=(r.pending||[]).length, a=[];
+  if(r.saved||!p) a.push('Saved '+r.saved+' figure(s)'+(r.flagged?' – marked as changed with your reason.':'.'));
+  if(p) a.push(p+' change(s) to locked days sent to '+(r.approver||'the warehouse monitor')+' for approval ('+r.pending.join(', ')+'). The plan keeps the old figure until he approves.');
+  return a.join(' ');
 }
 function nextSchool(k){
   var sel=$(k==='p'?'pSchool':'dSchool'); var i=sel.selectedIndex;
@@ -2431,14 +2439,14 @@ function wApprovals(){
   $('wApprove').classList.toggle('hidden', !r.canApprove || !L.length);
   $('tWhBadge').innerHTML = L.length ? '<span class="badge2">'+L.length+' to approve</span>' : '';
   $('wApproveList').innerHTML=L.map(function(q){
-    return '<div class="req"><b dir="auto">'+esc(q.school)+'</b> – '+esc(q.village)+' · '+esc(q.label)+' · '+q.shift+'<br>Delivered: <b>'+q.current+' → '+q.requested+'</b> parcels<br>'+esc(q.reason)+(q.note?' – '+esc(q.note):'')+
-      '<br><span class="meta">'+esc(q.by)+' · '+esc(q.at)+' · '+q.id+'</span><div class="act"><button class="btn ok2" onclick="wDecide(\''+q.id+'\',\'Approved\')">Approve</button><button class="btn no" onclick="wDecide(\''+q.id+'\',\'Rejected\')">Reject</button></div></div>';
+    return '<div class="req"><b dir="auto">'+esc(q.school)+'</b> – '+esc(q.village)+' · '+esc(q.label)+' · '+q.shift+'<br>'+(q.kind==='plan'?'Weekly plan':'Delivered')+': <b>'+q.current+' → '+q.requested+'</b> parcels<br>'+esc(q.reason)+(q.note?' – '+esc(q.note):'')+
+      '<br><span class="meta">'+esc(q.by)+' · '+esc(q.at)+' · '+q.id+'</span><div class="act"><button class="btn ok2" onclick="wDecide(\''+q.id+'\',\'Approved\',\''+(q.kind||'')+'\')">Approve</button><button class="btn no" onclick="wDecide(\''+q.id+'\',\'Rejected\',\''+(q.kind||'')+'\')">Reject</button></div></div>';
   }).join('');
 }
-function wDecide(id,dec){
+function wDecide(id,dec,kind){
   var note = dec==='Rejected' ? (prompt('Reason for rejecting (optional):')||'') : '';
   busy(true);
-  call('apiDecide',S.uid,S.pin,id,dec,note).then(function(){ wFresh(dec==='Approved'?'Delivered number approved – the school\'s received figure follows it.':'Rejected – the school\'s received figure goes back to the plan.'); })
+  call('apiDecide',S.uid,S.pin,id,dec,note).then(function(){ wFresh(kind==='plan' ? (dec==='Approved'?'Plan change approved – the weekly plan and the order follow it.':'Plan change rejected – the plan keeps its figure.') : dec==='Approved'?'Delivered number approved – the school\'s received figure follows it.':'Rejected – the school\'s received figure goes back to the plan.'); })
     .catch(function(e){ busy(false); show($('wErr'),e); window.scrollTo(0,0); });
 }
 /* ---- menu changes ---- */
@@ -2544,10 +2552,19 @@ function wRetSel(){
   Array.prototype.forEach.call($('wRItems').querySelectorAll('input[type=checkbox]'),function(c){ if(!c.checked) return; var k=+c.getAttribute('data-k'), q=$('wRItems').querySelector('input[data-q="'+k+'"]').value; out.push({it:s.items[k].it, q:+q||0, main:s.items[k].main}); });
   return {s:s,list:out};
 }
+/* v9.19.2: whole parcels by parcel type (e.g. 948 Apples + Milk and 2 Apples + Peanuts = 950) */
+function wTypesWhole(types, got){
+  var rem={}, tot=0; Object.keys(got).forEach(function(k){ rem[k]=got[k]; });
+  types.slice().sort(function(a,b){ return b.n-a.n; }).forEach(function(t){
+    var k=Math.min.apply(null,[t.n].concat(t.items.map(function(it){ return rem[it]||0; })));
+    if(k>0){ t.items.forEach(function(it){ rem[it]-=k; }); tot+=k; }
+  });
+  return tot;
+}
 function wRetCalc(){
   var x=wRetSel(), s=x.s, el=$('wRWhole'); if(!s||!el) return;
   var main=s.items.filter(function(i){return i.main;}), got={}; x.list.forEach(function(i){ got[i.it]=(got[i.it]||0)+i.q; });
-  var whole = main.length && main.every(function(i){ return got[i.it]>0; }) ? Math.min.apply(null, main.map(function(i){ return got[i.it]; })) : 0;
+  var whole = s.types ? wTypesWhole(s.types, got) : main.length && main.every(function(i){ return got[i.it]>0; }) ? Math.min.apply(null, main.map(function(i){ return got[i.it]; })) : 0; // v9.19.2: substitute parcels count
   var q=document.querySelector('input[name=wRT]:checked'), cr=q&&q.value==='q';
   if(cr){ el.innerHTML = !x.list.length ? 'Tick the items covered by the credit.' : (whole?'<b>'+whole+' whole parcels</b>':'Some items')+' come off the waybill only. The school keeps its figures (they were distributed) – the monitor is not asked to correct anything.'; return; }
   el.innerHTML = !x.list.length ? 'Tick the items that came back.' : whole ? '<b>'+whole+' whole parcels</b> come off what the school received ('+s.expected+' → '+Math.max(0,s.expected-whole)+').'+(s.saved!=null?' The monitor already saved this day and will be asked to correct it.':'') :
