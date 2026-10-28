@@ -96,6 +96,7 @@
   .xl.amb .fl input{background:#fff4d6;border-color:#e0a800}.d10{background:#fff4d6;color:#7a5200;border-radius:8px;padding:7px 10px;font-size:12px;margin-top:6px;font-weight:600}
   .xtip{margin:2px 0 0}
   /* v9.15 warehouse tile */
+  .req.rqp{border-color:#9fb3d1;background:#f3f7fc}.rqt{font-size:12px;font-weight:700;color:#2f5597;margin-bottom:3px}.req.rqd .rqt{color:#9a5b00}
   .xtab.rq{border-color:#9fb3d1;background:#f3f7fc}.xtab.rq>summary{color:#2f5597}.xtab.rq .btn{margin-top:8px}
   .wlist{max-height:55vh;overflow-y:auto;border:1px solid var(--line);border-radius:10px;margin-top:6px}
   .wrow{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-bottom:1px solid var(--line);margin:0;color:var(--text);font-size:14px;cursor:pointer}
@@ -645,7 +646,7 @@
 <!-- WAREHOUSE (v9.15) -->
 <section id="v-wh" class="hidden">
   <div class="card hidden" id="wApprove">
-    <h2>Delivered numbers to approve</h2>
+    <h2>To approve</h2>
     <div id="wApproveList"></div>
   </div>
   <div class="card">
@@ -819,11 +820,13 @@ function applyLogin(r, uid, pin){
     S.user=r.user; S.uid=uid; S.pin=pin; S.schools=r.schools; S.infoSchools=r.infoSchools||r.schools; S.reasons=r.reasons; S.now=r.now; S.weeks=r.weeks; S.rules=r.rules;
     store('snk_uid',uid); store('snk_pin', $('lRem').checked ? pin : null);
     $('hsub').textContent = r.user.name+' · '+roleLabel(r.user.role);
-    $('tPlan').textContent = 'Forecast per school, day and shift. Closes '+r.rules.planCutoff+' for the following week.';
+    $('tPlan').textContent = r.rules.daily ? 'Forecast per school, day and shift. Each day closes at '+r.rules.daily+' the day before.' : 'Forecast per school, day and shift. Closes '+r.rules.planCutoff+' for the following week.'; // v9.23
     $('tDaily').textContent = 'Received, distributed and leftovers. Each day can be entered until '+r.rules.dailyCutoff+(r.rules.dailyDays?' the next day.':'.');
     $('rules').innerHTML =
+      (r.rules.daily ? '• <b>Weekly plan</b>: each day can be changed until <b>'+esc(r.rules.daily)+' the day before</b>.<br>'+
+      '• After that, only the <b>Project Officer / Senior PO</b> can send a change, with a reason – <b>'+esc(r.rules.approver||'the warehouse monitor')+'</b> approves it.<br>' :
       '• <b>Weekly plan</b> for next week closes <b>'+esc(r.rules.planCutoff)+'</b>.<br>'+
-      '• After that, only <b>'+esc(r.rules.pickup2)+'</b> can still change, on <b>'+esc(r.rules.midWeek)+'</b>, with a reason.<br>'+
+      '• After that, only <b>'+esc(r.rules.pickup2)+'</b> can still change, on <b>'+esc(r.rules.midWeek)+'</b>, with a reason.<br>')+
       (r.rules.late?'• <b>Until '+esc(r.rules.late.until)+'</b>: any upcoming day can still be changed until <b>'+esc(r.rules.late.time)+' the day before</b>, with a reason.<br>':'')+
       '• <b>Snacks distribution</b> figures for a day can be entered until <b>'+esc(r.rules.dailyCutoff)+(r.rules.dailyDays?' the next day':'')+'</b>. Older days are view only.<br>'+
       '• <b>School info</b>: working days (this week or permanent), students with allergies, student numbers and PM changes go to your Project Officer for approval. Ask before <b>'+esc(r.rules.planCutoff)+'</b> for next week.<br>'+
@@ -862,7 +865,7 @@ function applyLogin(r, uid, pin){
     if(hasSnack && r.user.canEnter) $('rules').innerHTML+='<br>• <b>Received from the supplier</b> = delivered – returns (it fills itself). If the supplier delivered a different number of parcels, use <b>Different number delivered?</b> in Snacks distribution – the warehouse monitor approves it. If a return is recorded after you saved, the day shows ⚠ to correct.';
     if(wh){
       if(wh.role!=='pm'){ ['tDash','tKitchen'].forEach(function(id){ $(id).classList.add('hidden'); }); Array.prototype.forEach.call(document.querySelectorAll('.tile.snk,.tile.inf'), function(t){ t.classList.add('hidden'); }); $('rules').innerHTML=''; }
-      $('tWhText').textContent = wh.canReturn ? 'Menu changes, returns to the supplier and delivered numbers to approve.' : 'Menu changes (other snacks, same number of parcels) – returns view only.';
+      $('tWhText').textContent = wh.canReturn ? 'Weekly plan changes and delivered numbers to approve, menu changes and returns to the supplier.' : 'Menu changes (other snacks, same number of parcels) – returns view only.'; // v9.24
       $('rules').innerHTML+=($('rules').innerHTML?'<br>':'')+'• <b>Warehouse – menu changes</b>: tick the schools that got other snacks (same number of parcels). The supplier order, the waybill and the reconciliation follow.'+
         (wh.canReturn?'<br>• <b>Warehouse – returns</b>: one or more items per school. If every item of the day\'s menu comes back, those parcels come off what the school received and the monitor is asked to correct the day.<br>• <b>Delivered numbers</b> reported by monitors wait for your approval.':'')+
         '<br>• A month closes at 13:00 on the 2nd of the next month – after that its waybill is final.';
@@ -2434,14 +2437,21 @@ function wRender(){
   $('wBody').innerHTML = W.tab==='menu' ? wMenuHtml() : wRetHtml();
   if(W.tab==='menu') wMenuSync(); else wRetSync();
 }
-function wApprovals(){
+function wApprovals(){ // v9.24: weekly plan changes and delivered numbers in two separate, labelled lists
   var r=W.d, L=r.pending||[];
   $('wApprove').classList.toggle('hidden', !r.canApprove || !L.length);
   $('tWhBadge').innerHTML = L.length ? '<span class="badge2">'+L.length+' to approve</span>' : '';
-  $('wApproveList').innerHTML=L.map(function(q){
-    return '<div class="req"><b dir="auto">'+esc(q.school)+'</b> – '+esc(q.village)+' · '+esc(q.label)+' · '+q.shift+'<br>'+(q.kind==='plan'?'Weekly plan':'Delivered')+': <b>'+q.current+' → '+q.requested+'</b> parcels<br>'+esc(q.reason)+(q.note?' – '+esc(q.note):'')+
+  var P=L.filter(function(q){ return q.kind==='plan'; }), R=L.filter(function(q){ return q.kind!=='plan'; });
+  function card(q){
+    var pl=q.kind==='plan';
+    return '<div class="req '+(pl?'rqp':'rqd')+'"><div class="rqt">'+(pl?'📅 Weekly snack plan – change after the cut-off':'🚚 Snacks distribution – delivered number')+'</div>'+
+      '<b dir="auto">'+esc(q.school)+'</b> – '+esc(q.village)+' · '+esc(q.label)+' · '+q.shift+'<br>'+
+      (pl?'Plan for '+esc(q.label)+': <b>'+q.current+' → '+q.requested+'</b> parcels':'Planned <b>'+q.current+'</b> → delivered by the supplier <b>'+q.requested+'</b> parcels')+'<br>'+
+      esc(q.reason)+(q.note?' – '+esc(q.note):'')+
       '<br><span class="meta">'+esc(q.by)+' · '+esc(q.at)+' · '+q.id+'</span><div class="act"><button class="btn ok2" onclick="wDecide(\''+q.id+'\',\'Approved\',\''+(q.kind||'')+'\')">Approve</button><button class="btn no" onclick="wDecide(\''+q.id+'\',\'Rejected\',\''+(q.kind||'')+'\')">Reject</button></div></div>';
-  }).join('');
+  }
+  $('wApproveList').innerHTML=(P.length?'<div class="sec">📅 Weekly snack plan changes ('+P.length+')</div><div class="meta">Sent by Project Officers after the plan closed. Approving changes the plan and the supplier order.</div>'+P.map(card).join(''):'')+
+    (R.length?'<div class="sec">🚚 Delivered numbers ('+R.length+')</div><div class="meta">Reported by monitors in Snacks distribution when the supplier delivered a different number.</div>'+R.map(card).join(''):'');
 }
 function wDecide(id,dec,kind){
   var note = dec==='Rejected' ? (prompt('Reason for rejecting (optional):')||'') : '';
