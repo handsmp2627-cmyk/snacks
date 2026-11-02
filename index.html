@@ -599,7 +599,7 @@
         <div><label for="hShift">Shift</label><select id="hShift" onchange="hGradeOpts();hRender()"></select></div>
         <div><label for="hGrade" id="hGradeL">Grade</label><select id="hGrade" onchange="hGradeChange()"></select></div>
       </div>
-      <div id="hDateW" class="hidden"><label for="hDate">Date of the headcount</label><input id="hDate" type="date" onchange="hDateChange()"></div>
+      <div id="hMonthW"><label for="hMonth">Month</label><select id="hMonth" onchange="hMonthChange()"></select></div><div id="hDateW" class="hidden"><label for="hDate">Date of the headcount</label><input id="hDate" type="date" onchange="hDateChange()"></div>
     </div>
   </div>
   <div id="hBody" class="hidden">
@@ -1445,7 +1445,7 @@ function initHc(){
 function hTab(t){
   if(H.dirty && !confirm('You have changes that are not saved. Leave them?')) return;
   H.tab=t; $('hTabReg').classList.toggle('on',t==='reg'); $('hTabHc').classList.toggle('on',t==='hc');
-  $('hDateW').classList.toggle('hidden',t!=='hc');
+  $('hDateW').classList.add('hidden'); /* v9.27: the month is chosen, not the day */
   if(H.d){ hGradeOpts(); hRender(); }
 }
 function hLoad(){
@@ -1455,15 +1455,21 @@ function hLoad(){
   var ds=$('hDate').value||todayLocal();
   swr('hc', $('hBody'), 'apiHcGet', [S.uid,S.pin,sid,ds], function(r){
     var keepG=H.d && H.d.school.id===r.school.id ? $('hGrade').value : '', keepS=H.d && H.d.school.id===r.school.id ? $('hShift').value : '';
-    H.d=r; H.dirty=false;
+    H.d=r; H.dirty=false; hMonthOpts(r);
     $('hShift').innerHTML=r.shifts.map(function(x){return '<option>'+x+'</option>';}).join('');
     if(keepS && r.shifts.indexOf(keepS)>=0) $('hShift').value=keepS;
     $('hGradeL').textContent=r.opd?'Age group':'Grade';
     hGradeOpts(keepG);
-    $('hPick').classList.remove('hidden'); $('hDateW').classList.toggle('hidden',H.tab!=='hc');
+    $('hPick').classList.remove('hidden'); $('hDateW').classList.add('hidden');
     hRender();
   }, function(e){ show($('hErr'),e); $('hBody').classList.remove('hidden'); });
 }
+/* v9.25: month of the registration / headcount (monitors: this and last month; approvers: last 6) */
+/* v9.26: school total of a shift – approved grades, with grade g replaced by secs when given */
+function hRegSchoolTot(sh,g,secs){ var o=(H.d.reg||{})[sh]||{}, t=0; Object.keys(o).forEach(function(gg){ if(g && gg===g) return; o[gg].secs.forEach(function(x){ t+=hRegTot(x); }); }); if(g && secs) secs.forEach(function(x){ t+=hRegTot(x); }); return t; }
+function hLastDay(ym){ var n=new Date(+ym.substr(0,4), +ym.substr(5,2), 0).getDate(); return ym+'-'+('0'+n).slice(-2); }
+function hMonthOpts(r){ var ms=(r.months||[r.month]).slice(); if(ms.indexOf(r.month)<0) ms.push(r.month); ms.sort().reverse(); $('hMonth').innerHTML=ms.map(function(m){ return '<option value="'+m+'">'+MN[+m.substr(5,2)-1]+' '+m.substr(0,4)+'</option>'; }).join(''); $('hMonth').value=r.month; var t=todayLocal(); $('hDate').min=r.month+'-01'; $('hDate').max=(r.month===t.substr(0,7))?t:hLastDay(r.month); }
+function hMonthChange(){ var ym=$('hMonth').value, t=todayLocal(); if(H.dirty && !confirm('You have changes that are not saved. Leave them?')){ $('hMonth').value=H.d.month; return; } H.dirty=false; $('hDate').value=(ym===t.substr(0,7))?t:hLastDay(ym); hLoad(); }
 function hDateChange(){
   var d=$('hDate').value; if(!d) return;
   if(d>todayLocal()){ $('hDate').value=todayLocal(); d=todayLocal(); }
@@ -1496,9 +1502,10 @@ function hRender(){
   if(H.tab==='reg') inf = reg ? '<div class="meta">Last saved by '+esc(reg.by)+'</div>' : '<div class="info">Not entered yet. Ask the school focal point for the class lists, then add one section per class.</div>';
   else {
     inf = hc ? '<div class="meta">Counted on '+esc(dLabel(hc.date))+' · '+esc(hc.by)+'</div>' : '<div class="info">No headcount for '+esc(g)+' in '+esc(MN[+d.month.substr(5,2)-1])+' yet.'+(reg?' The sections come from the registration.':' Registration is not entered yet – you can still count.')+'</div>';
-    if(hc && hc.date!==$('hDate').value) inf+='<div class="warn">Saving replaces the '+esc(dLabel(hc.date))+' count of this grade (it is kept in the history).</div>';
+    if(hc) inf+='<div class="warn">Saving replaces the '+esc(dLabel(hc.date))+' count of this grade for this month (it is kept in the history).</div>';
   }
-  $('hInfo').innerHTML=inf;
+  if(H.tab==='reg' && d.students && +d.students[sh]){ var hT=hRegSchoolTot(sh,null,null), hI=+d.students[sh]; if(hT && hT!==hI) inf+='<div class="warn">School total registered ('+sh+'): <b>'+hT+'</b> – School Info says <b>'+hI+'</b> ('+(hT>hI?'+':'')+(hT-hI)+'). This is flagged in orange in the annex.</div>'; }
+  var pd=d.pending&&((d.pending[H.tab]||{})[sh]||{})[g]; if(pd) inf+='<div class="warn">Waiting for approval ('+esc(pd.id)+'): '+esc(pd.total)+(H.tab==='reg'?' registered':' present')+' · sent by '+esc(pd.by)+' · '+esc(pd.at)+'. The figures below are the last approved ones – saving again replaces this request.</div>'; $('hInfo').innerHTML=inf;
   $('hAdd').classList.toggle('hidden',!d.canEdit); $('hSave').classList.toggle('hidden',!d.canEdit);
   $('hSave').textContent = H.tab==='reg' ? 'Save registration – '+g : 'Save headcount – '+g;
   hDrawSecs(); hProg();
@@ -1541,10 +1548,9 @@ function hSave(){
   var empty=H.secs.filter(function(x){ return F.every(function(f){ return x[f[0]]===''||x[f[0]]==null; }); });
   if(empty.length){ show($('hErr'),'Section '+empty[0].sec+' is empty – enter 0 where there are no students, or remove the section.'); return; }
   var secs=H.secs.map(function(x){ var o={sec:x.sec}; F.forEach(function(f){ o[f[0]]=x[f[0]]===''?0:+x[f[0]]; }); return o; });
-  busy(true);
-  var p = H.tab==='reg' ? call('apiRegSave',S.uid,S.pin,d.school.id,sh,g,secs,$('hNote').value.trim()) : call('apiHcSave',S.uid,S.pin,d.school.id,sh,g,$('hDate').value,secs);
-  p.then(function(x){
-    busy(false); H.dirty=false;
+  if(H.tab==='reg' && d.students && +d.students[sh]){ var hInfT=+d.students[sh], hNewT=hRegSchoolTot(sh,g,secs); if(hNewT!==hInfT && !confirm('Warning: with this change the '+sh+' registration of the school is '+hNewT+' students, but School Info says '+hInfT+' ('+(hNewT>hInfT?'+':'')+(hNewT-hInfT)+').\n\nYou can still save – it goes to your Project Officer for approval and is shown in orange in the annex until the numbers match.\n\nSave anyway?')) return; }
+  busy(true); var p = H.tab==='reg' ? call('apiRegSave',S.uid,S.pin,d.school.id,sh,g,secs,$('hNote').value.trim(),d.month) : call('apiHcSave',S.uid,S.pin,d.school.id,sh,g,$('hDate').value,secs);
+  p.then(function(x){ busy(false); H.dirty=false; if(x.status==='Pending'){ var pk=H.tab; d.pending=d.pending||{reg:{},hc:{}}; d.pending[pk]=d.pending[pk]||{}; (d.pending[pk][sh]=d.pending[pk][sh]||{})[g]={id:x.id,by:S.user.name,at:'just now',total:x.total,secs:secs,ds:pk==='hc'?$('hDate').value:''}; cPut(cKey('apiHcGet',[S.uid,S.pin,d.school.id,$('hDate').value||todayLocal()]), d); hRender(); show($('hOk'),(pk==='reg'?'Registration':'Headcount')+' sent to your Project Officer for approval ('+x.id+') – '+g+': '+x.total+(pk==='reg'?' students':' present')+'. The tracker and the annex keep the last approved figures until it is approved.'); loadApprovals(); return; }
     var now=todayLocal(), by=S.user.name+' · '+now;
     (d[H.tab][sh]=d[H.tab][sh]||{})[g]={secs:secs, by:by, note:H.tab==='reg'?$('hNote').value.trim():'', date:H.tab==='hc'?$('hDate').value:''};
     cPut(cKey('apiHcGet',[S.uid,S.pin,d.school.id,$('hDate').value||now]), d);
@@ -1661,6 +1667,7 @@ function renderDaily(){
   ['AM','PM'].forEach(function(sh){
     var x=r.shifts[sh];
     if(!x.exists) return;
+    x.sh=sh; if(x.selfQ===undefined){ var oth=sh==='AM'?'PM':'AM', own=s.id+'|'+oth, sq=0; x.tList=(x.tList||[]).filter(function(t){ if(t.to===own){ sq+=(+t.qty||0); return false; } return true; }); if(sq){ x.tOut=(+x.tOut||0)-sq; x.kept=(+x.kept||0)+sq; } x.selfQ=sq; if(sh==='PM') x.tIn=(+x.tIn||0)-((r.shifts.AM&&r.shifts.AM.selfQ)||0); } // v9.29: leftover given to the other shift shows as the storage count + the choice below
     var ed=x.editable; if(ed){ anyEdit=true; mode=x.mode; openMsg=x.msg; }
     var dis=ed?'':' disabled';
     var rec = x.received!=null ? x.received : (ed && x.planned!=null ? x.planned : '');
@@ -1680,7 +1687,8 @@ function renderDaily(){
        '<div class="fl ro"><label>Left in storage from yesterday</label><b>'+x.opening+'</b></div>'+
        rRow+
        xferBox(sh,x,ed)+
-       (x.tIn?'<div class="fl ro xr"><label>+ Received from other schools</label><b>'+x.tIn+'</b></div>':'')+
+        (sh==='PM'&&s.hasPM?'<div class="fl ro xr"><label>+ Leftover given by the AM shift today</label><b class="selfIn">0</b></div>':'')+
+       (x.tIn?'<div class="fl ro xr"><label>+ Received from other schools'+(sh==='AM'&&s.hasPM?' / the PM shift':'')+'</label><b>'+x.tIn+'</b></div>':'')+
        '<div class="fl ro xr tor hidden"><label>– Sent to other schools</label><b class="toutRo">0</b></div>'+
        '<div class="fl tot"><label>= Available to distribute</label><b class="avOut">–</b></div></div>'+
        /* v9.17: students reached and the storage count always show; double portions, helpers, damaged / thrown and loss are added from a dropdown (lines with a saved figure open by themselves) */
@@ -1689,6 +1697,7 @@ function renderDaily(){
        xLine('dbl',x.dbl||'',dis,ed)+
        '<div class="fl tot dist'+(x.dbl?'':' hidden')+'" data-xt="dbl"><label>= Total distributed</label><b class="dtot">–</b></div>'+
        flRow('Left in storage now (count it)','kept',x.kept==null?'':x.kept,dis)+
+        (s.hasPM?'<div class="fl"><label>The leftover goes to</label><select data-c="selfGo" onchange="calc()"'+dis+'><option value="">'+sh+' shift – next working day</option><option value="1"'+(x.selfQ?' selected':'')+'>'+(sh==='AM'?'PM shift – today':'AM shift – next working day')+'</option></select></div>':'')+
        xLine('helpers',x.helpers||'',dis,ed)+
        xLine('thrown',thr||'',dis,ed)+
        xLine('loss',x.loss||'',dis,ed,x.lossNote)+
@@ -1783,7 +1792,7 @@ function xOff(btn){
 function flRow(label,f,val,dis,cls){ return '<div class="fl'+(cls?' '+cls:'')+'"><label>'+label+'</label><input type="number" inputmode="numeric" min="0" data-f="'+f+'" value="'+val+'"'+dis+(f==='dbl'||f==='helpers'||f==='thrown'?' placeholder="0"':f==='kept'?' placeholder="count"':'')+' oninput="calc()"></div>'; }
 /* v9.6: every parcel accounted for – distributed + helpers + damaged / thrown + kept + transferred out = leftover from before + received + transferred in */
 function acct(x,v){ // v9.12: available = left from yesterday + received + transferred in – transferred out; must equal distributed + kept (counted) + helpers + thrown
-  var av=x.opening+(+v.received||0)+(x.tIn||0)-(+v.tOut||0), out=(+v.distributed||0)+(+v.kept||0)+(+v.helpers||0)+(+v.thrown||0)+(+v.loss||0); // v9.17: loss
+  var av=x.opening+(+v.received||0)+(x.tIn||0)+(x.sh==='PM'?selfNow():0)-(+v.tOut||0), out=(+v.distributed||0)+(+v.kept||0)+(+v.helpers||0)+(+v.thrown||0)+(+v.loss||0); // v9.17: loss
   return { av:av, out:out, diff:av-out, left:av-out, ready: v.received!=='' && v.distributed!=='' && v.kept!=='' };
 }
 function vals(box){ var o={}; box.querySelectorAll('input[data-f]').forEach(function(el){ o[el.dataset.f]=el.value; }); box.querySelectorAll('[data-c]').forEach(function(el){ o[el.dataset.c]=el.value; }); o.damaged=String((+o.helpers||0)+(+o.thrown||0)+(+o.loss||0)); if(o.loss===undefined) o.loss=''; if(o.distributed!=='') o.distributed=String((+o.distributed||0)+(+o.dbl||0));
@@ -1796,9 +1805,12 @@ function planChk(x, v){
   if(x.planned==null) return rec>0 ? {bad:true, txt:'No plan was entered for this day – received '+rec+'.'} : {bad:false};
   return rec===x.planned ? {bad:false, txt:'received '+rec+' = planned '+x.planned+'.'} : {bad:true, txt:'received '+rec+', planned '+x.planned+' ('+(rec>x.planned?'+':'')+(rec-x.planned)+').'};
 }
+/* v9.29: parcels the AM shift is giving to the PM shift today (live from the AM box) */
+function selfNow(){ var b=document.querySelector('#dShifts .shift[data-sh=AM]'), am=S.daily&&S.daily.shifts.AM; if(!b) return (am&&am.selfQ)||0; var sel=b.querySelector('[data-c=selfGo]'), k=b.querySelector('input[data-f=kept]'); return sel&&sel.value==='1'&&k?(+k.value||0):0; }
 function calc(){
   document.querySelectorAll('#dShifts .shift').forEach(function(box){
     var x=S.daily.shifts[box.dataset.sh], v=vals(box), a=acct(x,v), sm=box.querySelector('.xfer .xt');
+    var si=box.querySelector('.selfIn'); if(si) si.textContent=selfNow(); // v9.29
     if(sm) sm.textContent = +v.tOut ? v.tOut+' parcels' : '';
     var xs=box.querySelector('.xtab:not(.rq) .xsum'); if(xs) xs.textContent=xferSum(x.tIn,v.tOut);
     var xb=box.querySelector('.xfer'); if(xb) xb.classList.toggle('on', +v.tOut>0);
@@ -1847,7 +1859,8 @@ function saveDaily(){
     var b10=(+v.received||0)||a.av; if(+v.thrown>0 && b10>0 && +v.thrown>0.1*b10) warn.push(sh+': damaged / thrown ('+v.thrown+') is more than 10% of '+b10+'. Did you call Mohamad Houshaimy for a return?');
     if((+v.distributed)-(+v.dbl||0)>x.students) warn.push(sh+': students reached is above enrolment ('+x.students+').');
     var pc=planChk(x,v); if(pc&&pc.bad){ if(!v.chkReason){ err=sh+': the figures do not match the plan – choose a reason for the difference.'; return; } if(/^Other/.test(v.chkReason)&&!String(v.chkNote||'').trim()){ err=sh+': explain the difference in the details box.'; return; } } else { v.chkReason=''; v.chkNote=''; }
-    v.notes=$('dNotes').value.trim(); data[sh]=v;
+    if(v.selfGo==='1'&&+v.kept>0){ v.tList.push({to:r.school.id+'|'+(sh==='AM'?'PM':'AM'), qty:String(+v.kept)}); v.tOut=String((+v.tOut||0)+(+v.kept)); v.kept='0'; } delete v.selfGo; // v9.29
+      v.notes=$('dNotes').value.trim(); data[sh]=v;
   });
   if(err){ show($('dErr'),err); return; }
   if(!Object.keys(data).length){ show($('dErr'),'Enter the figures first.'); return; }
