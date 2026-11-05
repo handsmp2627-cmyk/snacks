@@ -821,7 +821,7 @@ function applyLogin(r, uid, pin){
     store('snk_uid',uid); store('snk_pin', $('lRem').checked ? pin : null);
     $('hsub').textContent = r.user.name+' · '+roleLabel(r.user.role);
     $('tPlan').textContent = r.rules.daily ? 'Forecast per school, day and shift. Each day closes at '+r.rules.daily+' the day before.' : 'Forecast per school, day and shift. Closes '+r.rules.planCutoff+' for the following week.'; // v9.23
-    $('tDaily').textContent = 'Received, distributed and leftovers. Each day can be entered until '+r.rules.dailyCutoff+(r.rules.dailyDays?' the next day.':'.');
+    $('tDaily').textContent = 'Received, distributed and leftovers. Each day can be entered until '+r.rules.dailyCutoff+(r.rules.dailyDays?' the next day':'')+(r.rules.dailyPm?' (PM shift: '+r.rules.dailyPm+' the same day)':'')+'.'; // v9.39
     $('rules').innerHTML =
       (r.rules.daily ? '• <b>Weekly plan</b>: each day can be changed until <b>'+esc(r.rules.daily)+' the day before</b>.<br>'+
       '• After that, only the <b>Project Officer / Senior PO</b> can send a change, with a reason – <b>'+esc(r.rules.approver||'the warehouse monitor')+'</b> approves it.<br>'+
@@ -829,7 +829,7 @@ function applyLogin(r, uid, pin){
       '• <b>Weekly plan</b> for next week closes <b>'+esc(r.rules.planCutoff)+'</b>.<br>'+
       '• After that, only <b>'+esc(r.rules.pickup2)+'</b> can still change, on <b>'+esc(r.rules.midWeek)+'</b>, with a reason.<br>')+
       (r.rules.late?'• <b>Until '+esc(r.rules.late.until)+'</b>: any upcoming day can still be changed until <b>'+esc(r.rules.late.time)+' the day before</b>, with a reason.<br>':'')+
-      '• <b>Snacks distribution</b> figures for a day can be entered until <b>'+esc(r.rules.dailyCutoff)+(r.rules.dailyDays?' the next day':'')+'</b>. Older days are view only.<br>'+
+      '• <b>Snacks distribution</b> figures for a day can be entered until <b>'+esc(r.rules.dailyCutoff)+(r.rules.dailyDays?' the next day':'')+'</b>'+(r.rules.dailyPm?' (PM shift: <b>'+esc(r.rules.dailyPm)+' the same day</b>)':'')+'. Older days are view only.<br>'+
       '• <b>School info</b>: working days (this week or permanent), students with allergies, student numbers and PM changes go to your Project Officer for approval. Ask before <b>'+esc(r.rules.planCutoff)+'</b> for next week.<br>'+
       '• Leftovers carry to the next working day unless given out as double portions.<br>'+
       '• <b>Allergies</b> (counts per school) show on each school. For snacks, substitutes come in the warehouse order – check they arrive.'+
