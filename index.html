@@ -824,7 +824,8 @@ function applyLogin(r, uid, pin){
     $('tDaily').textContent = 'Received, distributed and leftovers. Each day can be entered until '+r.rules.dailyCutoff+(r.rules.dailyDays?' the next day.':'.');
     $('rules').innerHTML =
       (r.rules.daily ? '• <b>Weekly plan</b>: each day can be changed until <b>'+esc(r.rules.daily)+' the day before</b>.<br>'+
-      '• After that, only the <b>Project Officer / Senior PO</b> can send a change, with a reason – <b>'+esc(r.rules.approver||'the warehouse monitor')+'</b> approves it.<br>' :
+      '• After that, only the <b>Project Officer / Senior PO</b> can send a change, with a reason – <b>'+esc(r.rules.approver||'the warehouse monitor')+'</b> approves it.<br>'+
+      '• <b>Every working day</b> must be filled before saving. If the school is closed that day, change it first in <b>School info → Working days</b>.<br>' :
       '• <b>Weekly plan</b> for next week closes <b>'+esc(r.rules.planCutoff)+'</b>.<br>'+
       '• After that, only <b>'+esc(r.rules.pickup2)+'</b> can still change, on <b>'+esc(r.rules.midWeek)+'</b>, with a reason.<br>')+
       (r.rules.late?'• <b>Until '+esc(r.rules.late.until)+'</b>: any upcoming day can still be changed until <b>'+esc(r.rules.late.time)+' the day before</b>, with a reason.<br>':'')+
@@ -966,6 +967,19 @@ function kChip(row){
   if(row.status==='Approved') h+='<span class="st g">Approved</span>';
   return h;
 }
+/* v9.37: changes waiting for this user's approval, on any day – listed at the top so the badge can always be found */
+function kApprovalsHtml(r){
+  var L=r.approvals||[]; S.kb=S.kb||{}; S.kb.approve=L.length; kBadge();
+  if(!L.length) return '';
+  return '<div class="warn"><b>Waiting for your approval ('+L.length+')</b> – tap one to open that day and shift.'+L.map(function(q){
+    var here=q.ds===r.ds&&q.shift===r.shift;
+    return '<div style="margin-top:6px"><a href="#" onclick="kGo(\''+q.ds+'\',\''+q.shift+'\');return false;" dir="auto">'+esc(q.name)+' · '+esc(q.label)+' · '+q.shift+'</a> – distributed <b>'+q.dist+'</b>'+(q.prep!=null?' · prepared '+q.prep:'')+(q.left!=null?' · leftover '+q.left:'')+(q.by?' · by '+esc(q.by):'')+(here?' <b>(shown below)</b>':'')+'</div>';
+  }).join('')+'</div>';
+}
+function kGo(ds,sh){
+  var sel=$('kDate'); if(![].some.call(sel.options,function(o){ return o.value===ds; })){ var op=document.createElement('option'); op.value=ds; op.textContent=ds; sel.appendChild(op); }
+  sel.value=ds; K.shift=sh; show($('kOk'),''); loadKitchen(); window.scrollTo(0,0);
+}
 function renderKitchen(){
   var r=S.k;
   $('kDate').innerHTML=r.dates.map(function(d){return '<option value="'+d.value+'">'+esc(d.label)+'</option>';}).join('');
@@ -976,6 +990,7 @@ function renderKitchen(){
   if(r.isToday) ban = r.closed ? '<div class="warn">'+r.shift+' orders closed at <b>'+esc(r.cutoff)+'</b>. Orders sent now are marked late.</div>'
                                : '<div class="warn">⏱ '+r.shift+' orders close at <b>'+esc(r.cutoff)+'</b>.</div>';
   else ban = '<div class="info">'+esc(r.label)+' – past day. A leftover entered now goes to the Project Officer for approval.</div>';
+  ban=kApprovalsHtml(r)+ban; // v9.37
   $('kBanner').innerHTML=ban;
   if(!r.kitchens.length){ $('kBody').innerHTML='<div class="card"><div class="meta">No kitchen schools are assigned to you.</div></div>'; return; }
   var conf=0;
@@ -1231,7 +1246,17 @@ function savePlan(){
     if(v!=null&&v>st) over.push(el.dataset.sh+' '+d.label+' ('+v+' > '+st+')');
     return {ds:d.ds, shift:el.dataset.sh, qty:v};
   });
-  if(entries.some(function(e){return e.qty===null;})){ show($('pErr'),'Use 0 for a day with no distribution – do not leave a saved figure empty.'); return; }
+  if(entries.some(function(e){return e.qty===null;})){ show($('pErr'),'Do not leave a saved figure empty. If the school is closed that day, change it first in School info → Working days (this week only or permanent).'); return; }
+  if(!S.user.canOverride){ // v9.38: monitors fill every working day still open; a closed day is changed in School info first
+    var zero=[], miss=[], how=' If the school is closed that day, change it first in School info → Working days (this week only or permanent).';
+    S.plan.days.forEach(function(d,i){ ['AM','PM'].forEach(function(sh){
+      var c=d[sh]; if(!c||!c.working||!c.editable||c.mode!=='open') return;
+      var el=document.querySelector('#c_'+sh+'_'+i+' input'), v=el?String(el.value).trim():'';
+      if(v==='') miss.push(sh+' '+d.label); else if(+v===0) zero.push(sh+' '+d.label);
+    }); });
+    if(zero.length){ show($('pErr'),'0 is not accepted on a working day: '+zero.join(', ')+'.'+how); return; }
+    if(miss.length){ show($('pErr'),'Fill every working day of the week before saving. Missing: '+miss.join(', ')+'.'+how); return; }
+  }
   var need=checkReason();
   if(need && !$('pReason').value){ show($('pErr'),'Select a reason for the change.'); return; }
   if(over.length && !confirm('These figures are above the number of students:\n'+over.join('\n')+'\n\nSave anyway?')) return;
