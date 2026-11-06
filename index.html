@@ -2638,9 +2638,9 @@ function wMenuHtml(){
   var r=W.d, h='';
   h+='<div class="card"><h2>Menu changes – '+esc(r.label)+'</h2>';
   if(r.menuEx.length){
-    h+=r.menuEx.map(function(x){ return '<div class="req" style="border-color:#c9d3e6;background:#f6f8fb"><b dir="auto">'+esc(x.name)+'</b>'+(x.shift&&x.shift!=='AM'?' · '+x.shift:'')+'<br>'+esc(x.from)+' → <b>'+esc(x.to)+'</b>'+(x.noSubs?' · <span class="multi">no allergy substitutes</span>':'')+
+    h+=r.menuEx.map(function(x){ return '<div class="req" style="border-color:#c9d3e6;background:#f6f8fb"><b dir="auto">'+esc(x.name)+'</b>'+' · '+(x.shift?x.shift+' shift':'both shifts')+'<br>'+esc(x.from)+' → <b>'+esc(x.to)+'</b>'+(x.noSubs?' · <span class="multi">no allergy substitutes</span>':'')+
       (x.by?'<br><span class="meta">'+esc(x.by)+'</span>':'<br><span class="meta">typed in the warehouse sheet</span>')+
-      (r.canMenu&&!r.locked?'<div class="act"><button class="btn sec" onclick="wMenuDel(\''+x.school+'\',\''+esc(x.from).replace(/'/g,"\\'")+'\')">Remove</button></div>':'')+'</div>'; }).join('');
+      (r.canMenu&&!r.locked?'<div class="act"><button class="btn sec" onclick="wMenuDel(\''+x.school+'\',\''+esc(x.from).replace(/'/g,"\\'")+'\',\''+(x.shift||'')+'\')">Remove</button></div>':'')+'</div>'; }).join('');
   } else h+='<div class="meta">No menu change on this day.</div>';
   h+='</div>';
   if(!r.canMenu || r.locked) return h;
@@ -2653,9 +2653,10 @@ function wMenuHtml(){
     '<label>Replaced with (tick one or more)</label><div class="achk" id="wTo">'+r.items.map(function(it){ return '<label><input type="checkbox" value="'+esc(it)+'"> '+esc(it)+'</label>'; }).join('')+'</div>'+
     '<label>Allergy substitutes</label><div class="radio"><label><input type="radio" name="wAlg" value="0" checked> Given as planned</label><label><input type="radio" name="wAlg" value="1"> None – all students got the same snack</label></div>'+
     '<label for="wNote">Note (optional)</label><input id="wNote" placeholder="e.g. supplier ran out of brioche">'+
+    '<label>Shift</label><div class="radio">'+[['','AM and PM'],['AM','AM only'],['PM','PM only']].map(function(o){ return '<label><input type="radio" name="wSh" value="'+o[0]+'"'+((W.sh||'')===o[0]?' checked':'')+' onchange="W.sh=this.value;wMenuSync()"> '+o[1]+'</label>'; }).join('')+'</div>'+
     '<label>Schools</label><input id="wQ" type="search" placeholder="Search school, village or monitor" oninput="W.q=this.value;wMenuSync()" value="'+esc(W.q)+'">'+
     '<div class="wtools"><button type="button" class="amore" onclick="wTickAll(true)">Tick all shown</button><button type="button" class="amore" onclick="wTickAll(false)">Untick all</button><span class="mini" id="wCount"></span></div>'+
-    '<div id="wSchools" class="wlist">'+r.schools.map(function(s,i){ return '<label class="wrow" data-i="'+i+'"><input type="checkbox" value="'+s.id+'" onchange="wCountUpd()"><span><b dir="auto">'+esc(s.name)+'</b><small>'+esc(s.village)+' · '+esc(s.monitor)+' · '+s.qty+' parcels · '+esc(s.menu)+'</small></span></label>'; }).join('')+'</div>'+
+    '<div id="wSchools" class="wlist">'+r.schools.map(function(s,i){ return '<label class="wrow" data-i="'+i+'"><input type="checkbox" value="'+s.id+'|'+s.shift+'" onchange="wCountUpd()"><span><b dir="auto">'+esc(s.name)+'</b> <span style="background:'+(s.shift==='PM'?'#7030a0':'#1f3864')+';color:#fff;border-radius:4px;padding:0 6px;font-size:11px">'+s.shift+'</span><small>'+esc(s.village)+' · '+esc(s.monitor)+' · '+s.qty+' parcels · '+esc(s.menu)+'</small></span></label>'; }).join('')+'</div>'+
     '<button class="btn" onclick="wMenuSave()">Save menu change</button></div>';
   return h;
 }
@@ -2663,8 +2664,9 @@ function wMenuSync(){
   var r=W.d; if(!$('wSchools')) return;
   var q=normTxt(W.q||'');
   Array.prototype.forEach.call($('wSchools').children,function(el){
-    var s=r.schools[+el.getAttribute('data-i')], ok=W.froms.length>0 && W.froms.every(function(it){ return s.menuItems.indexOf(it)>=0; }), hit=!q || normTxt(s.name+' '+s.village+' '+s.monitor+' '+s.id).indexOf(q)>=0;
-    var cb=el.querySelector('input'); cb.disabled=!ok; if(!ok) cb.checked=false;
+    var s=r.schools[+el.getAttribute('data-i')], ok=W.froms.length>0 && W.froms.every(function(it){ return s.menuItems.indexOf(it)>=0; }), hit=!q || normTxt(s.name+' '+s.village+' '+s.monitor+' '+s.id).indexOf(q)>=0, shOk=!W.sh || s.shift===W.sh; // v9.44: AM / PM separately
+    hit=hit&&shOk;
+    var cb=el.querySelector('input'); cb.disabled=!ok; if(!ok||!shOk) cb.checked=false;
     el.classList.toggle('off',!ok); el.classList.toggle('hidden',!hit);
   });
   Array.prototype.forEach.call($('wTo').querySelectorAll('input'),function(c){ if(W.froms.indexOf(c.value)>=0){ c.checked=false; c.disabled=true; } else c.disabled=false; });
@@ -2672,7 +2674,7 @@ function wMenuSync(){
 }
 function wFromUpd(){ W.froms=Array.prototype.map.call($('wFrom').querySelectorAll('input:checked'),function(c){return c.value;}); wMenuSync(); }
 function wTickAll(on){ Array.prototype.forEach.call($('wSchools').children,function(el){ var c=el.querySelector('input'); if(!el.classList.contains('hidden') && !c.disabled) c.checked=on; }); wCountUpd(); }
-function wCountUpd(){ var n=$('wSchools').querySelectorAll('input:checked').length; $('wCount').textContent = n ? n+' school'+(n>1?'s':'')+' ticked' : ''; }
+function wCountUpd(){ var n=$('wSchools').querySelectorAll('input:checked').length; $('wCount').textContent = n ? n+' school shift'+(n>1?'s':'')+' ticked' : ''; }
 function wMenuSave(){
   var ids=Array.prototype.map.call($('wSchools').querySelectorAll('input:checked'),function(c){return c.value;});
   var to=Array.prototype.map.call($('wTo').querySelectorAll('input:checked'),function(c){return c.value;});
@@ -2681,16 +2683,16 @@ function wMenuSave(){
   if(!ids.length){ show($('wErr'),'Tick at least one school.'); return; }
   if(!W.froms.length){ show($('wErr'),'Tick the item(s) that were replaced.'); return; }
   if(!to.length){ show($('wErr'),'Tick what the schools got instead of '+W.froms.join(' + ')+'.'); return; }
-  if(!confirm(ids.length+' school'+(ids.length>1?'s':'')+': '+W.froms.join(' + ')+' → '+to.join(' + ')+(ns?' (no allergy substitutes)':'')+' on '+W.d.label+'. Save?')) return;
+  if(!confirm(ids.length+' school shift'+(ids.length>1?'s':'')+' ('+ids.map(function(v){ return v.split('|')[1]; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).join(' + ')+'): '+W.froms.join(' + ')+' → '+to.join(' + ')+(ns?' (no allergy substitutes)':'')+' on '+W.d.label+'. Save?')) return;
   busy(true);
   call('apiWhMenuChange',S.uid,S.pin,W.d.ds,ids,W.froms,to,ns,$('wNote').value.trim()).then(function(x){
     wFresh('Saved for '+x.saved+' school'+(x.saved===1?'':'s')+'.'+(x.skipped.length?' Not changed: '+x.skipped.join('; ')+'.':'')+' The order updates in a few minutes.');
   }).catch(function(e){ busy(false); show($('wErr'),e); window.scrollTo(0,0); });
 }
-function wMenuDel(id,from){
-  if(!confirm('Remove this menu change ('+from+')? The school goes back to the planned menu.')) return;
+function wMenuDel(id,from,sh){
+  if(!confirm('Remove this menu change ('+from+(sh?', '+sh+' shift':'')+')? The school goes back to the planned menu.')) return;
   busy(true);
-  call('apiWhMenuRemove',S.uid,S.pin,W.d.ds,id,from).then(function(){ wFresh('Menu change removed.'); }).catch(function(e){ busy(false); show($('wErr'),e); window.scrollTo(0,0); });
+  call('apiWhMenuRemove',S.uid,S.pin,W.d.ds,id,from,sh||'').then(function(){ wFresh('Menu change removed.'); }).catch(function(e){ busy(false); show($('wErr'),e); window.scrollTo(0,0); });
 }
 /* ---- returns ---- */
 function wRetHtml(){
