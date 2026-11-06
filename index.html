@@ -151,6 +151,12 @@
   .dchip.on{background:var(--navy);border-color:var(--navy);color:#fff}
   .dchip.on small{color:#cfd8ea}
   .dchip.lock{opacity:.55;cursor:not-allowed}
+  /* v9.41: late warnings, PM recess by day */
+  .lw{background:#fdecea;border:1px solid #f5c2bd;color:#8a1c12;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13.5px}
+  .lw b.t{display:block;font-size:14px;margin-bottom:4px}.lw ul{margin:4px 0 8px 18px;padding:0}.lw li{margin:2px 0}.lw .btn{margin-top:4px;background:#8a1c12}
+  .dchip.rch{border-color:#e0a800;box-shadow:inset 0 -3px 0 #e0a800}.dchip.on.rch{box-shadow:inset 0 -3px 0 #ffd666}
+  .rcl{font-size:13px;margin-top:6px}.rcl div{padding:5px 0;border-bottom:1px dashed #e3e8f0}.rcl div:last-child{border-bottom:0}
+  .rchip{display:inline-block;background:#fff4d6;color:#7a5200;border-radius:8px;padding:5px 9px;font-size:12.5px;font-weight:600;margin:6px 6px 0 0}
   .dchip.diff{box-shadow:0 0 0 2px #e69138 inset}
   .kv{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:14px;margin-top:8px}
   .kv div:nth-child(odd){color:var(--muted)}
@@ -367,6 +373,7 @@
 
 <!-- HOME -->
 <section id="v-home" class="hidden">
+  <div id="lateW" class="hidden"></div>
   <div class="tiles">
     <button class="tile hidden" id="tWh" onclick="go('wh')" style="border-left-color:#7f6000"><b>Warehouse <span id="tWhBadge"></span></b><span id="tWhText">Menu changes, returns to the supplier and delivered numbers to approve.</span></button>
     <button class="tile hidden" id="tDash" onclick="go('dash')" style="border-left-color:#2a78d6"><b>Dashboard</b><span>Snacks and kitchen figures by day, week, month or the whole programme – all schools, an area, a district, a kitchen or one school.</span></button>
@@ -462,6 +469,33 @@
         <div class="ok" id="oOk"></div>
         <div class="next hidden" id="oNext"><button class="btn sec" onclick="opsToPlan()">Update the weekly plan for this school →</button></div>
       </div>
+    </div>
+    <div class="card hidden" id="rcCard">
+      <h2>PM recess by day</h2>
+      <div class="meta">For days when the PM shift starts earlier (for example, no AM shift that day). Other days keep the standard PM recess.</div>
+      <div class="rcl" id="rcNow"></div>
+      <div id="rcForm">
+        <label>Day (tap one)</label>
+        <div class="daychips" id="rcDays"></div>
+        <div id="rcRest" class="hidden">
+          <div class="sec">Is this change permanent?</div>
+          <div class="radio">
+            <label><input type="radio" name="rcType" value="week" checked onchange="rcSync()"> This week only</label>
+            <label><input type="radio" name="rcType" value="perm" onchange="rcSync()"> Permanent</label>
+          </div>
+          <div id="rcWeekW"><label for="rcWeek">Week</label><select id="rcWeek" onchange="rcSync()"></select></div>
+          <label for="rcTime" id="rcTimeL">PM recess on that day</label>
+          <input id="rcTime" type="time">
+          <div class="meta" id="rcStd"></div>
+          <label for="rcReason">Reason (required)</label>
+          <select id="rcReason"></select>
+          <label for="rcNote">Details</label>
+          <input id="rcNote" placeholder="e.g. no AM shift on Fridays, the PM shift starts at 10:00">
+          <button class="btn" id="rcSave" onclick="saveRecessDay()">Send for approval</button>
+        </div>
+      </div>
+      <div class="err" id="rcErr"></div>
+      <div class="ok" id="rcOk"></div>
     </div>
     <div class="card" id="aCard">
       <h2>Students with allergies / eating needs</h2>
@@ -687,7 +721,7 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbyzRf6yjLSRwU1wY_KvcIIGY4
 var S = { user:null, uid:'', pin:'', schools:[], reasons:[], plan:null, daily:null, now:null };
 function $(id){ return document.getElementById(id); }
 /* Calls that are safe to repeat automatically if Google returns an error page (busy server). */
-var NO_RETRY = { apiWhReturnType:1, apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
+var NO_RETRY = { apiRecessDay:1, apiWhReturnType:1, apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
 var DEBUG = /[?&]debug=1/.test(location.search);
 function dbg(fn, srv, tot){ var d=$('dbg'); if(!d){ d=document.createElement('div'); d.id='dbg'; d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#111;color:#0f0;font:11px monospace;padding:4px 8px;z-index:40;max-height:30vh;overflow:auto'; document.body.appendChild(d); }
   d.innerHTML='<div>'+fn+': server '+(srv/1000).toFixed(2)+' s · total '+(tot/1000).toFixed(2)+' s · Google/network '+((tot-srv)/1000).toFixed(2)+' s</div>'+d.innerHTML; }
@@ -834,9 +868,11 @@ function applyLogin(r, uid, pin){
       '• Leftovers carry to the next working day unless given out as double portions.<br>'+
       '• <b>Allergies</b> (counts per school) show on each school. For snacks, substitutes come in the warehouse order – check they arrive.'+
       (r.user.canOverride?'<br>• As '+esc(r.user.role)+' you can edit closed days. A reason is always recorded.':'');
+    lateWarn(r.warnings||[]); // v9.41
     var opts=S.reasons.map(function(x){return '<option>'+esc(x)+'</option>';}).join('');
     $('pReason').innerHTML='<option value="">Select a reason</option>'+opts; $('dReason').innerHTML=$('pReason').innerHTML;
-    $('iReason').innerHTML=$('pReason').innerHTML; $('oReason').innerHTML=$('pReason').innerHTML; $('aReason').innerHTML=$('pReason').innerHTML; $('dropReason').innerHTML=$('pReason').innerHTML;
+    var optsI='<option value="">Select a reason</option>'+S.reasons.filter(function(x){ return !/^area monitor late/i.test(x); }).map(function(x){return '<option>'+esc(x)+'</option>';}).join(''); // v9.41: the late reason is for the plan and distribution only
+    $('iReason').innerHTML=optsI; $('oReason').innerHTML=optsI; $('aReason').innerHTML=optsI; $('dropReason').innerHTML=optsI;
     $('tInfoBadge').innerHTML = r.pending ? '<span class="badge2">'+r.pending+' to approve</span>' : '';
     S.kb = r.kitchen || {count:0}; S.kRules = r.kRules;
     var hasSnack = S.schools.length>0, hasK = S.kb.count>0, hasInfo = S.infoSchools.length>0;
@@ -872,6 +908,20 @@ function applyLogin(r, uid, pin){
         '<br>• A month closes at 13:00 on the 2nd of the next month – after that its waybill is final.';
     }
 }
+/* v9.41: warnings for the area monitor (reason "Area monitor late"), shown on Home until "Noted" */
+function lateWarn(list){
+  S.warn=list||[]; var el=$('lateW'); if(!el) return;
+  if(!S.warn.length){ el.classList.add('hidden'); el.innerHTML=''; return; }
+  el.className='lw';
+  el.innerHTML='<b class="t">⚠ Late entr'+(S.warn.length>1?'ies':'y')+' – entered by your Project Officer</b>'+
+    'These days were not entered before the cut-off, so they were entered for you:<ul>'+S.warn.map(function(w){ return '<li><b>'+esc(w.form)+'</b> – '+esc(w.school)+' · '+esc(w.shift)+' · '+esc(w.label)+' <span class="meta">(entered by '+esc(w.by)+')</span></li>'; }).join('')+'</ul>'+
+    'Please enter each day before the cut-off.<br><button class="btn" onclick="lateSeen()">Noted</button>';
+}
+function lateSeen(){
+  var ids=(S.warn||[]).map(function(w){ return w.id; }); if(!ids.length) return;
+  busy(true);
+  call('apiWarnSeen',S.uid,S.pin,ids).then(function(){ busy(false); lateWarn([]); }).catch(function(e){ busy(false); alert(e); });
+}
 function signOut(){ if(S.uid) store('snl|'+S.uid,null); S.user=null; S.pin=''; store('snk_pin',null); go('login'); }
 function go(v){
   ['login','home','info','plan','daily','kitchen','hc','dash','wh'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
@@ -899,6 +949,7 @@ function refreshInfoBadge(force){ // v9.15: one call for every badge – School 
     if(S.user.canOverride) $('tInfoBadge').innerHTML = n.info ? '<span class="badge2">'+n.info+' to approve</span>' : '';
     $('tWhBadge').innerHTML = n.wh ? '<span class="badge2">'+n.wh+' to approve</span>' : '';
     S.fix=n.fix||[]; $('tDailyBadge').innerHTML = S.fix.length ? '<span class="badge2">'+S.fix.length+' to correct</span>' : '';
+    if(n.warnings) lateWarn(n.warnings); // v9.41
     if(!$('v-daily').classList.contains('hidden')) dFixList();
   }).catch(function(){});
 }
@@ -1011,7 +1062,8 @@ function renderKitchen(){
     h+='<table class="ktab"><tr><th>School</th><th>'+(anyConf?'Prepared':'Ordered')+'</th>'+(anyConf?'<th>Total distributed</th>':'')+'</tr>';
     var tO=0,tD=0,tL=0;
     k.rows.forEach(function(x){
-      var sub=(x.type==='Kitchen'?'Kitchen school · ':'')+'enrolled '+x.students+(x.type!=='Kitchen'&&x.monitor&&x.monitor!==S.user.name?' · '+esc(x.monitor):'');
+      var sub=(x.type==='Kitchen'?'Kitchen school · ':'')+'enrolled '+x.students+(x.type!=='Kitchen'&&x.monitor&&x.monitor!==S.user.name?' · '+esc(x.monitor):'')+
+        (x.rec&&x.rec.time?' · recess '+(x.rec.changed?'<b class="overt">'+esc(x.rec.time)+'</b> (changed today – usually '+esc(x.rec.std||'–')+')':esc(x.rec.time)):''); // v9.41
       var pv = kPrepOf(x), oOver = x.ordered!==null && pv>x.students, dOver = x.dist!==null && x.dist-(x.dbl||0)>x.students;
       var oc = x.canOrder ? '<input type="number" inputmode="numeric" min="0" id="ko_'+x.id+'" data-st="'+x.students+'" class="'+(oOver?'over':x.late?'late':'')+'" value="'+(x.ordered===null?'':x.ordered)+'" placeholder="–" oninput="kOver(this)">'
                           : (x.ordered===null?'–':(oOver?'<b class="overt">'+pv+'</b>':pv)+(x.confirmed&&pv!==x.ordered?'<small class="lft">ordered '+x.ordered+'</small>':''));
@@ -1266,7 +1318,9 @@ function savePlan(){
     show($('pOk'),planMsg(r));
     $('pNext').classList.remove('hidden');
     call('apiStatus',S.uid,S.pin,$('pWeek').value,S.now.ds).then(function(st){ schoolOpts($('pSchool'),st,'p'); });
-    return call('apiGetPlan',S.uid,S.pin,s.id,S.plan.week).then(function(x){ cPut(cKey('apiGetPlan',[S.uid,S.pin,s.id,S.plan.week]),x); S.plan=x; renderPlan(); show($('pOk'),planMsg(r)); $('pNext').classList.remove('hidden'); });
+    store(cKey('apiGetPlan',[S.uid,S.pin,s.id,S.plan.week]),null); // v9.41
+    return call('apiGetPlan',S.uid,S.pin,s.id,S.plan.week).then(function(x){ cPut(cKey('apiGetPlan',[S.uid,S.pin,s.id,S.plan.week]),x); S.plan=x; renderPlan(); show($('pOk'),planMsg(r)); $('pNext').classList.remove('hidden'); })
+      .catch(function(){ show($('pOk'),planMsg(r)+' (The screen could not refresh – the plan is saved. Open the school again to see it.)'); }); // v9.41
   }).catch(function(e){ busy(false); show($('pErr'),e); });
 }
 /* v9.20: changes to locked days go to the warehouse monitor */
@@ -1274,6 +1328,7 @@ function planMsg(r){
   var p=(r.pending||[]).length, a=[];
   if(r.saved||!p) a.push('Saved '+r.saved+' figure(s)'+(r.flagged?' – marked as changed with your reason.':'.'));
   if(p) a.push(p+' change(s) to locked days sent to '+(r.approver||'the warehouse monitor')+' for approval ('+r.pending.join(', ')+'). The plan keeps the old figure until he approves.');
+  if(r.warned) a.push('Late warning sent to '+r.warned+'.'); // v9.41
   return a.join(' ');
 }
 function nextSchool(k){
@@ -1305,15 +1360,22 @@ function loadApprovals(){
     $('iApproveList').innerHTML=list.map(function(q){
       return '<div class="req"><b>'+esc(q.school)+'</b> – '+esc(q.village)+' · '+q.shift+'<br>'+(q.label?'<b>'+esc(q.label)+'</b>':'Students: <b>'+q.current+' → '+q.requested+'</b>')+'<br>'+
         esc(q.reason)+(q.note?' – '+esc(q.note):'')+'<br><span class="meta">'+esc(q.by)+' · '+esc(q.at)+' · '+q.id+'</span>'+
-        '<div class="act"><button class="btn ok2" onclick="decide(\''+q.id+'\',\'Approved\')">Approve</button><button class="btn no" onclick="decide(\''+q.id+'\',\'Rejected\')">Reject</button></div></div>';
+        '<div class="act"><button class="btn ok2" onclick="decide(\''+q.id+'\',\'Approved\',this)">Approve</button><button class="btn no" onclick="decide(\''+q.id+'\',\'Rejected\',this)">Reject</button></div></div>';
     }).join('');
   }).catch(function(e){ $('iApprove').classList.remove('hidden'); $('iApproveList').innerHTML='<div class="warn">Could not load the requests to approve: '+esc((e&&e.msg)||e)+'. Go back and open School info again.</div>'; });
 }
-function decide(id,dec){
+function decide(id,dec,btn){
   var note = dec==='Rejected' ? (prompt('Reason for rejecting (optional):')||'') : '';
-  busy(true);
-  call('apiDecide',S.uid,S.pin,id,dec,note).then(function(){ busy(false); loadApprovals(); if($('iSchool').value){ store(cKey('apiGetInfo',[S.uid,S.pin,$('iSchool').value]),null); loadInfo(); } })
-    .catch(function(e){ busy(false); alert(e); });
+  /* v9.41: the card shows "Approving…" while only its own buttons wait – the rest of the list stays usable; the list and the school refresh in the background */
+  var card = btn && btn.closest ? btn.closest('.req') : null;
+  if(card){ card.style.opacity='.55'; Array.prototype.forEach.call(card.querySelectorAll('button'),function(b){ b.disabled=true; }); var a=card.querySelector('.act'); if(a) a.insertAdjacentHTML('beforeend','<span class="meta"> '+(dec==='Approved'?'Approving…':'Rejecting…')+'</span>'); } else busy(true);
+  call('apiDecide',S.uid,S.pin,id,dec,note).then(function(){
+    busy(false);
+    if(card){ card.style.opacity='1'; card.innerHTML='<b>'+(dec==='Approved'?'✓ Approved':'✗ Rejected')+'</b> – '+esc(id); card.style.background=dec==='Approved'?'#e3f1e5':'#fdecea'; }
+    var b=$('tInfoBadge').querySelector('.badge2'); if(b){ var n=(parseInt(b.textContent,10)||1)-1; $('tInfoBadge').innerHTML = n>0 ? '<span class="badge2">'+n+' to approve</span>' : ''; }
+    setTimeout(loadApprovals, 1500);
+    if($('iSchool').value){ store(cKey('apiGetInfo',[S.uid,S.pin,$('iSchool').value]),null); loadInfo(true); }
+  }).catch(function(e){ busy(false); if(card){ card.style.opacity='1'; Array.prototype.forEach.call(card.querySelectorAll('button'),function(b){ b.disabled=false; }); var m=card.querySelector('.act .meta'); if(m) m.remove(); } alert(e); });
 }
 function loadInfo(keep){
   pickSync('iSchool');
@@ -1353,8 +1415,71 @@ function renderInfo(){
   $('iDaysNote').classList.toggle('hidden',!r.canOps);
   $('oCard').classList.toggle('hidden',!r.canOps);
   if(r.canOps && (!S.ops || S.ops.school.id!==s.id)) loadOps();
+  renderRecess();
   renderAlg();
   renderDrop();
+}
+/* ---------- v9.41: PM recess by day ---------- */
+var RC={day:-1};
+function rcWeekDefault(day){ var W=S.weeks||[], t=todayLocal(); for(var i=0;i<W.length;i++){ if(W[i].value>=addDays(t,-6) && addDays(W[i].value,day)>=t) return W[i].value; } return W.length?W[W.length-1].value:''; }
+function rcEff(day,type,week){ var R=S.info.recDays||{}, p=(R.perm||{})[day]||'', w='';
+  (R.weeks||[]).forEach(function(x){ if(x.day===day && x.week===week) w=x.time; });
+  return type==='week' ? (w||p||R.std||'') : (p||R.std||''); }
+function renderRecess(){
+  var r=S.info, R=r.recDays, D=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], DF=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  show($('rcErr'),''); show($('rcOk'),'');
+  $('rcCard').classList.toggle('hidden', !R);
+  if(!R) return;
+  var L=[];
+  Object.keys(R.perm||{}).sort().forEach(function(d){ L.push('<div>Every <b>'+DF[+d]+'</b>: <b>'+esc(R.perm[d])+'</b> <span class="meta">(permanent)</span></div>'); });
+  (R.weeks||[]).forEach(function(x){ L.push('<div><b>'+esc(x.label)+'</b>: <b>'+esc(x.time)+'</b> <span class="meta">(this week only)</span></div>'); });
+  (R.pending||[]).forEach(function(q){ L.push('<div class="meta">⏳ Waiting for approval: '+esc(q.label)+' · '+esc(q.by)+'</div>'); });
+  $('rcNow').innerHTML='<div>Standard PM recess: <b>'+esc(R.std||'not set')+'</b></div>'+L.join('');
+  var can=r.canEdit && !!R.std;
+  $('rcForm').classList.toggle('hidden',!can);
+  if(!can) return;
+  var chg={}; Object.keys(R.perm||{}).forEach(function(d){ chg[d]=1; }); (R.weeks||[]).forEach(function(x){ chg[x.day]=1; });
+  $('rcDays').innerHTML=D.map(function(d,i){ return '<div class="dchip'+(chg[i]?' rch':'')+(RC.day===i?' on':'')+'" onclick="rcPick('+i+')">'+d+(r.days.PM[i]?'':'<small>no PM</small>')+'</div>'; }).join('');
+  $('rcWeek').innerHTML=(S.weeks||[]).filter(function(w){ return w.value>=addDays(todayLocal(),-6); }).map(function(w){ return '<option value="'+w.value+'">'+esc(w.label)+'</option>'; }).join('');
+  $('rcReason').innerHTML=$('iReason').innerHTML.replace(/<option>Area monitor late[^<]*<\/option>/g,'');
+  $('rcSave').textContent = r.pmApproval ? 'Send for approval' : 'Save';
+  $('rcRest').classList.toggle('hidden', RC.day<0 || RC.sid!==r.school.id);
+  if(RC.day>=0 && RC.sid===r.school.id) rcSync(true);
+}
+function rcPick(i){ RC.day=i; RC.sid=S.info.school.id; show($('rcErr'),''); show($('rcOk'),'');
+  Array.prototype.forEach.call($('rcDays').children,function(c,j){ c.classList.toggle('on',j===i); });
+  $('rcWeek').value=rcWeekDefault(i); $('rcRest').classList.remove('hidden'); rcSync(); }
+function rcType(){ var x=document.querySelector('input[name="rcType"]:checked'); return x?x.value:'week'; }
+function rcSync(keep){
+  var R=S.info.recDays, i=RC.day, t=rcType(), wk=$('rcWeek').value, DF=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  if(i<0) return;
+  $('rcWeekW').classList.toggle('hidden', t!=='week');
+  var eff=rcEff(i,t,wk), ds=t==='week'&&wk?addDays(wk,i):'';
+  if(keep!==true) $('rcTime').value=eff;
+  $('rcTimeL').textContent='PM recess on '+(t==='week'&&ds?dLabel(ds)+' only':'every '+DF[i]);
+  var p=(R.perm||{})[i], note=[];
+  if(eff!==R.std) note.push('Standard PM recess: '+R.std+'.'); else note.push('This is the standard PM recess. Change it for this day only.');
+  if(t==='week' && p && eff===p) note.push('Every '+DF[i]+' is already '+p+' (permanent).');
+  if(ds && ds<todayLocal()) note.push('⚠ This day has passed – choose next week.');
+  var pq=(R.pending||[]).filter(function(q){ return +q.day===i && q.type===t && (t!=='week' || q.week===wk); })[0];
+  if(pq) note.push('Waiting for approval: '+pq.label+'. Sending again replaces it.');
+  $('rcStd').textContent=note.join(' ');
+}
+function saveRecessDay(){
+  var r=S.info, i=RC.day, t=rcType(), wk=$('rcWeek').value, tm=$('rcTime').value;
+  show($('rcErr'),''); show($('rcOk'),'');
+  if(i<0){ show($('rcErr'),'Tap a day first.'); return; }
+  if(!tm){ show($('rcErr'),'Enter the PM recess time.'); return; }
+  if(tm===rcEff(i,t,wk)){ show($('rcErr'),'This is already the PM recess for that day. Change the time first.'); return; }
+  if(!$('rcReason').value){ show($('rcErr'),'Select a reason.'); return; }
+  busy(true);
+  call('apiRecessDay',S.uid,S.pin,r.school.id,i,tm,t,t==='week'?wk:'',$('rcReason').value,$('rcNote').value.trim()).then(function(x){
+    busy(false); $('rcNote').value=''; $('rcReason').value='';
+    if(x.info) S.info.recDays=x.info;
+    store(cKey('apiGetInfo',[S.uid,S.pin,r.school.id]),null);
+    renderRecess();
+    show($('rcOk'), x.status==='Pending' ? 'Sent to your Project Officer for approval ('+x.id+'). The day keeps its current recess until it is approved.' : 'Saved ('+x.id+').');
+  }).catch(function(e){ busy(false); show($('rcErr'),e); });
 }
 /* ---------- students with allergies (v8.7) ---------- */
 function renderAlg(){
@@ -1687,6 +1812,7 @@ function renderDaily(){
   $('dName').textContent=s.name;
   $('dMeta').textContent=r.label+' · '+s.village;
   $('dChips').innerHTML=algBox(s, s.hasPM?['AM','PM']:['AM'], 'Give the substitute items to these students – they come in the delivery.');
+  ['AM','PM'].forEach(function(sh){ var x=r.shifts[sh], rc=x&&x.recess; if(x&&x.exists&&rc&&rc.changed) $('dChips').innerHTML+='<span class="rchip">⏰ '+sh+' recess '+(r.ds===todayLocal()?'today':'this day')+': '+esc(rc.time)+' (changed'+(rc.std?' – usually '+esc(rc.std):'')+')</span>'; }); // v9.41
   var anyEdit=false, mode='', openMsg='';
   var h='';
   ['AM','PM'].forEach(function(sh){
@@ -1896,7 +2022,11 @@ function saveDaily(){
     busy(false);
     var msg='Saved.'+(res.warnings&&res.warnings.length?' Note: '+res.warnings.join(' '):'');
     call('apiStatus',S.uid,S.pin,S.now.ds,$('dDate').value).then(function(st){ schoolOpts($('dSchool'),st,'d'); });
-    return call('apiGetDaily',S.uid,S.pin,r.school.id,r.ds).then(function(x){ cPut(cKey('apiGetDaily',[S.uid,S.pin,r.school.id,r.ds]),x); S.daily=x; renderDaily(); show($('dOk'),msg); $('dNext').classList.remove('hidden'); });
+    if(res.warned) msg+=' Late warning sent to '+res.warned+'.'; // v9.41
+    store(cKey('apiGetDaily',[S.uid,S.pin,r.school.id,r.ds]),null); // v9.41: never show the copy from before the save again
+    show($('dOk'),msg); $('dNext').classList.remove('hidden'); S.dSaved=true;
+    return call('apiGetDaily',S.uid,S.pin,r.school.id,r.ds).then(function(x){ cPut(cKey('apiGetDaily',[S.uid,S.pin,r.school.id,r.ds]),x); S.daily=x; renderDaily(); show($('dOk'),msg); $('dNext').classList.remove('hidden'); })
+      .catch(function(){ show($('dOk'),msg+' (The screen could not refresh – your figures are saved. Open the school again to see them.)'); $('dNext').classList.remove('hidden'); }); // v9.41: the save worked – do not show a red error
   }).catch(function(e){ busy(false); show($('dErr'),e); });
 }
 
@@ -2485,16 +2615,23 @@ function wApprovals(){ // v9.24: weekly plan changes and delivered numbers in tw
       '<b dir="auto">'+esc(q.school)+'</b> – '+esc(q.village)+' · '+esc(q.label)+' · '+q.shift+'<br>'+
       (pl?'Plan for '+esc(q.label)+': <b>'+q.current+' → '+q.requested+'</b> parcels':'Planned <b>'+q.current+'</b> → delivered by the supplier <b>'+q.requested+'</b> parcels')+'<br>'+
       esc(q.reason)+(q.note?' – '+esc(q.note):'')+
-      '<br><span class="meta">'+esc(q.by)+' · '+esc(q.at)+' · '+q.id+'</span><div class="act"><button class="btn ok2" onclick="wDecide(\''+q.id+'\',\'Approved\',\''+(q.kind||'')+'\')">Approve</button><button class="btn no" onclick="wDecide(\''+q.id+'\',\'Rejected\',\''+(q.kind||'')+'\')">Reject</button></div></div>';
+      '<br><span class="meta">'+esc(q.by)+' · '+esc(q.at)+' · '+q.id+'</span><div class="act"><button class="btn ok2" onclick="wDecide(\''+q.id+'\',\'Approved\',\''+(q.kind||'')+'\',this)">Approve</button><button class="btn no" onclick="wDecide(\''+q.id+'\',\'Rejected\',\''+(q.kind||'')+'\',this)">Reject</button></div></div>';
   }
   $('wApproveList').innerHTML=(P.length?'<div class="sec">📅 Weekly snack plan changes ('+P.length+')</div><div class="meta">Sent by Project Officers after the plan closed. Approving changes the plan and the supplier order.</div>'+P.map(card).join(''):'')+
     (R.length?'<div class="sec">🚚 Delivered numbers ('+R.length+')</div><div class="meta">Reported by monitors in Snacks distribution when the supplier delivered a different number.</div>'+R.map(card).join(''):'');
 }
-function wDecide(id,dec,kind){
+function wDecide(id,dec,kind,btn){
   var note = dec==='Rejected' ? (prompt('Reason for rejecting (optional):')||'') : '';
-  busy(true);
-  call('apiDecide',S.uid,S.pin,id,dec,note).then(function(){ wFresh(kind==='plan' ? (dec==='Approved'?'Plan change approved – the weekly plan and the order follow it.':'Plan change rejected – the plan keeps its figure.') : dec==='Approved'?'Delivered number approved – the school\'s received figure follows it.':'Rejected – the school\'s received figure goes back to the plan.'); })
-    .catch(function(e){ busy(false); show($('wErr'),e); window.scrollTo(0,0); });
+  /* v9.41: only this card waits; when it is done it leaves the list at once and the rest of the screen refreshes in the background (no full-screen wait) */
+  var card = btn && btn.closest ? btn.closest('.req') : null;
+  if(card){ card.style.opacity='.55'; Array.prototype.forEach.call(card.querySelectorAll('button'),function(b){ b.disabled=true; }); var a=card.querySelector('.act'); if(a) a.insertAdjacentHTML('beforeend','<span class="meta"> '+(dec==='Approved'?'Approving…':'Rejecting…')+'</span>'); } else busy(true);
+  call('apiDecide',S.uid,S.pin,id,dec,note).then(function(){
+    busy(false);
+    var msg = kind==='plan' ? (dec==='Approved'?'Plan change approved – the weekly plan and the order follow it.':'Plan change rejected – the plan keeps its figure.') : dec==='Approved'?'Delivered number approved – the school\'s received figure follows it.':'Rejected – the school\'s received figure goes back to the plan.';
+    if(W.d){ W.d.pending=(W.d.pending||[]).filter(function(q){ return q.id!==id; }); cPut(cKey('apiWh',[S.uid,S.pin,W.d.ds]),W.d); wApprovals(); }
+    show($('wOk'),msg+' ('+id+')'); _badgeAt=0;
+    wLoad(true); show($('wOk'),msg+' ('+id+')');
+  }).catch(function(e){ busy(false); if(card){ card.style.opacity='1'; Array.prototype.forEach.call(card.querySelectorAll('button'),function(b){ b.disabled=false; }); var m=card.querySelector('.act .meta'); if(m) m.remove(); } show($('wErr'),e); window.scrollTo(0,0); });
 }
 /* ---- menu changes ---- */
 function wMenuHtml(){
