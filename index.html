@@ -30,6 +30,20 @@
   .tile span{color:var(--muted);font-size:13px}
   .err{background:var(--red);color:var(--redT);border-radius:9px;padding:10px 12px;margin-top:12px;font-size:14px;display:none}
   .ok{background:#e3f1e5;color:var(--green);border-radius:9px;padding:10px 12px;margin-top:12px;font-size:14px;display:none}
+  .nsave{background:#b00020;color:#fff;font-weight:700;border-radius:9px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .ysave{background:#e3f1e5;color:var(--green);font-weight:700;border-radius:9px;padding:10px 12px;margin-top:12px;font-size:14px}
+  .psave{background:var(--amber);color:var(--amberT);font-weight:700;border-radius:9px;padding:10px 12px;margin-top:12px;font-size:14px}
+  .bigred{background:#b00020;color:#fff;border-radius:10px;padding:14px;margin:12px 0;font-size:14px}
+  .bigred h3,.bigamb h3{margin:0 0 6px;font-size:17px}
+  .bigred a{color:#fff;font-weight:700}
+  .bigred .ln{background:rgba(255,255,255,.14);border-radius:8px;padding:10px;margin-top:8px}
+  .bigamb{background:var(--amber);color:var(--amberT);border-radius:10px;padding:14px;margin:12px 0;font-size:14px}
+  .bigamb .ln{background:rgba(255,255,255,.6);border-radius:8px;padding:10px;margin-top:8px}
+  .sdone{background:var(--grey);color:#333;border-radius:8px;padding:8px 10px;margin-top:8px;font-size:13px}
+  .sact{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+  .sact input,.sact select{flex:1;min-width:110px;margin:0;color:#222}
+  .sact .btn{width:auto;margin:0;flex:0 0 auto}
+  .bigred .btn.no{background:#fff;color:#9c0006}
   .warn{background:var(--yellow);color:#7f6000;border-radius:9px;padding:10px 12px;margin-top:10px;font-size:13px}
   .info{background:#eef2f9;border-radius:9px;padding:10px 12px;font-size:13px;color:#2b3a55;margin-top:10px}
   .school{font-size:17px;font-weight:700;direction:auto}
@@ -579,6 +593,7 @@
         <input id="pNote" placeholder="e.g. exam day, attendance about 300">
       </div>
       <button class="btn" id="pSave" onclick="savePlan()">Save plan</button>
+      <div id="pState"></div>
       <div class="err" id="pErr"></div>
       <div class="ok" id="pOk"></div>
       <div class="next hidden" id="pNext"><button class="btn sec" onclick="nextSchool('p')">Next school →</button></div>
@@ -685,7 +700,7 @@
   </div>
   <div class="card">
     <h2>Warehouse</h2>
-    <div class="seg" id="wTabs"><button id="wTabMenu" class="on" onclick="wTab('menu')">Menu changes<small>other snacks, same parcels</small></button><button id="wTabRet" onclick="wTab('ret')">Returns<small>back to the supplier</small></button></div>
+    <div class="seg" id="wTabs"><button id="wTabMenu" class="on" onclick="wTab('menu')">Menu changes<small>other snacks, same parcels</small></button><button id="wTabRet" onclick="wTab('ret')">Returns<small>back to the supplier</small></button><button id="wTabSup" onclick="wTab('sup')">Supplier order<small>checks and Excel</small></button></div>
     <label for="wDate">Day</label>
     <select id="wDate" onchange="wLoad()"></select>
     <div id="wBanner"></div>
@@ -721,7 +736,7 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbyzRf6yjLSRwU1wY_KvcIIGY4
 var S = { user:null, uid:'', pin:'', schools:[], reasons:[], plan:null, daily:null, now:null };
 function $(id){ return document.getElementById(id); }
 /* Calls that are safe to repeat automatically if Google returns an error page (busy server). */
-var NO_RETRY = { apiRecessDay:1, apiWhReturnType:1, apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
+var NO_RETRY = { apiSupResolve:1, apiSupDownload:1, apiRecessDay:1, apiWhReturnType:1, apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
 var DEBUG = /[?&]debug=1/.test(location.search);
 function dbg(fn, srv, tot){ var d=$('dbg'); if(!d){ d=document.createElement('div'); d.id='dbg'; d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#111;color:#0f0;font:11px monospace;padding:4px 8px;z-index:40;max-height:30vh;overflow:auto'; document.body.appendChild(d); }
   d.innerHTML='<div>'+fn+': server '+(srv/1000).toFixed(2)+' s · total '+(tot/1000).toFixed(2)+' s · Google/network '+((tot-srv)/1000).toFixed(2)+' s</div>'+d.innerHTML; }
@@ -1228,6 +1243,7 @@ function loadPlan(){
 }
 function renderPlan(){
   var r=S.plan, s=r.school, hasPM=s.hasPM;
+  planState(''); // v9.46
   $('pBody').classList.remove('hidden');
   $('pName').textContent=s.name;
   $('pMeta').textContent=s.village+' · '+s.area+' · Monitor: '+s.monitor;
@@ -1261,13 +1277,15 @@ function cellHtml(d,sh,i,students){
   if(c.status==='Changed') { cls+=' chg'; tag='changed'; }
   if(c.status==='Override') { cls+=' ovr'; tag='override'; }
   if(c.qty!=null && c.qty>students){ cls+=' over'; tag='above '+students; }
-  if(c.pending){ cls+=' chg'; tag='⏳ '+c.pending.qty+' to approve'; } // v9.20: change waiting for the warehouse monitor
+  if(c.pending){ cls+=' chg'; tag='⏳ '+c.pending.qty+' to approve'; }
+  if(!tag && c.qty!=null) tag='✓ saved'; // v9.46: what the sheet holds // v9.20: change waiting for the warehouse monitor
   var val=c.qty==null?'':c.qty;
   if(!c.working && c.qty==null && !canEdit) val='';
   return '<td><div class="'+cls+'" id="c_'+sh+'_'+i+'"><input type="number" inputmode="numeric" min="0" step="1" data-sh="'+sh+'" data-i="'+i+'" data-orig="'+val+'" value="'+val+'"'+dis+
     ' placeholder="'+(c.working?'':'–')+'" oninput="onPlanInput(this,'+students+')" title="'+esc(c.msg)+'"><span class="tag">'+esc(tag)+'</span></div></td>';
 }
 function onPlanInput(el,students){
+  setTimeout(function(){ planState(changedInputs().length?'dirty':''); },0); // v9.46
   var box=el.parentNode, v=el.value===''?null:+el.value;
   box.classList.toggle('over', v!=null && v>students);
   box.querySelector('.tag').textContent = v!=null && v>students ? 'above '+students : (el.value!==el.dataset.orig?'edited':'');
@@ -1298,7 +1316,7 @@ function savePlan(){
     if(v!=null&&v>st) over.push(el.dataset.sh+' '+d.label+' ('+v+' > '+st+')');
     return {ds:d.ds, shift:el.dataset.sh, qty:v};
   });
-  if(entries.some(function(e){return e.qty===null;})){ show($('pErr'),'Do not leave a saved figure empty. If the school is closed that day, change it first in School info → Working days (this week only or permanent).'); return; }
+  if(entries.some(function(e){return e.qty===null;})){ planErr('Do not leave a saved figure empty. If the school is closed that day, change it first in School info → Working days (this week only or permanent).'); return; }
   if(!S.user.canOverride){ // v9.38: monitors fill every working day still open; a closed day is changed in School info first
     var zero=[], miss=[], how=' If the school is closed that day, change it first in School info → Working days (this week only or permanent).';
     S.plan.days.forEach(function(d,i){ ['AM','PM'].forEach(function(sh){
@@ -1306,22 +1324,22 @@ function savePlan(){
       var el=document.querySelector('#c_'+sh+'_'+i+' input'), v=el?String(el.value).trim():'';
       if(v==='') miss.push(sh+' '+d.label); else if(+v===0) zero.push(sh+' '+d.label);
     }); });
-    if(zero.length){ show($('pErr'),'0 is not accepted on a working day: '+zero.join(', ')+'.'+how); return; }
-    if(miss.length){ show($('pErr'),'Fill every working day of the week before saving. Missing: '+miss.join(', ')+'.'+how); return; }
+    if(zero.length){ planErr('0 is not accepted on a working day: '+zero.join(', ')+'.'+how); return; }
+    if(miss.length){ planErr('Fill every working day of the week before saving. Missing: '+miss.join(', ')+'.'+how); return; }
   }
   var need=checkReason();
-  if(need && !$('pReason').value){ show($('pErr'),'Select a reason for the change.'); return; }
+  if(need && !$('pReason').value){ planErr('Select a reason for the change.'); return; }
   if(over.length && !confirm('These figures are above the number of students:\n'+over.join('\n')+'\n\nSave anyway?')) return;
   busy(true);
   call('apiSavePlan',S.uid,S.pin,s.id,S.plan.week,entries,need?$('pReason').value:'',$('pNote').value.trim()).then(function(r){
     busy(false); $('pNote').value=''; $('pReason').value='';
-    show($('pOk'),planMsg(r));
+    show($('pOk'),planMsg(r)); planState(r.saved||!(r.pending||[]).length?'ok':'sent',hhmm()); // v9.46
     $('pNext').classList.remove('hidden');
     call('apiStatus',S.uid,S.pin,$('pWeek').value,S.now.ds).then(function(st){ schoolOpts($('pSchool'),st,'p'); });
     store(cKey('apiGetPlan',[S.uid,S.pin,s.id,S.plan.week]),null); // v9.41
-    return call('apiGetPlan',S.uid,S.pin,s.id,S.plan.week).then(function(x){ cPut(cKey('apiGetPlan',[S.uid,S.pin,s.id,S.plan.week]),x); S.plan=x; renderPlan(); show($('pOk'),planMsg(r)); $('pNext').classList.remove('hidden'); })
+    return call('apiGetPlan',S.uid,S.pin,s.id,S.plan.week).then(function(x){ cPut(cKey('apiGetPlan',[S.uid,S.pin,s.id,S.plan.week]),x); S.plan=x; renderPlan(); show($('pOk'),planMsg(r)); $('pNext').classList.remove('hidden'); planState(r.saved||!(r.pending||[]).length?'ok':'sent',hhmm()); })
       .catch(function(){ show($('pOk'),planMsg(r)+' (The screen could not refresh – the plan is saved. Open the school again to see it.)'); }); // v9.41
-  }).catch(function(e){ busy(false); show($('pErr'),e); });
+  }).catch(function(e){ busy(false); planErr(e); }); // v9.46
 }
 /* v9.20: changes to locked days go to the warehouse monitor */
 function planMsg(r){
@@ -2580,6 +2598,84 @@ window.addEventListener('scroll', dbTipOff, {passive:true});
 var dbRsz=null;
 window.addEventListener('resize', function(){ clearTimeout(dbRsz); dbRsz=setTimeout(function(){ if(!$('v-dash').classList.contains('hidden') && D.d) D.charts.forEach(function(c){ dbChart(c.el,c.cfg); }); },150); });
 
+
+/* ---------- v9.46: plan form says plainly whether the sheet holds the figures ---------- */
+function planState(k,t){
+  var el=$('pState'); if(!el) return;
+  if(k==='fail'){ el.innerHTML='<div class="nsave">⛔ NOT SAVED – nothing was sent. Read the message below, fix it and press Save plan again.</div>'; try{ el.scrollIntoView({block:'center'}); }catch(e){} }
+  else if(k==='ok') el.innerHTML='<div class="ysave">✓ Saved at '+esc(t)+'. The figures below are now in the plan.</div>';
+  else if(k==='sent') el.innerHTML='<div class="psave">⏳ Sent for approval at '+esc(t)+'. The plan keeps the old figures until it is approved.</div>';
+  else if(k==='dirty') el.innerHTML='<div class="psave">Not saved yet – press Save plan.</div>';
+  else el.innerHTML='';
+}
+function planErr(m){ show($('pErr'),m); planState('fail'); }
+function hhmm(){ try{ return new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Beirut',hour:'2-digit',minute:'2-digit'}).format(new Date()); }catch(e){ var d=new Date(); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); } }
+function planDirty(){ try{ return !!(S.plan && !$('v-plan').classList.contains('hidden') && changedInputs().length); }catch(e){ return false; } }
+window.addEventListener('beforeunload', function(e){ if(planDirty()){ e.preventDefault(); e.returnValue=''; } });
+
+/* ---------- v9.46: Warehouse tile → Supplier order (checks before the Excel download) ---------- */
+var SUP = { d:null };
+function tomorrowLocal(){ var d=new Date(todayLocal()+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()+1); return d.toISOString().substr(0,10); }
+function supLoad(){
+  var ds=$('wDate').value||todayLocal();
+  $('wBody').innerHTML='<div class="card"><div class="meta">Checking the order for this day…</div></div>';
+  call('apiSupCheck',S.uid,S.pin,ds).then(function(r){ SUP.d=r; if(W.tab==='sup' && ($('wDate').value||todayLocal())===r.ds) supRender(); })
+    .catch(function(e){ show($('wErr'),e); $('wBody').innerHTML=''; });
+}
+function supLine(x,red){
+  var r=SUP.d, id=x.school+'_'+x.shift+'_'+x.check;
+  var h='<div class="ln"><b dir="auto">'+esc(x.name)+'</b> ('+esc(x.school)+') · '+x.shift+' – '+esc(x.msg)+
+    '<br>Monitor: '+esc(x.monitor||'–')+(x.phone?' · <a href="tel:'+esc(String(x.phone).replace(/[^0-9+]/g,''))+'">📞 '+esc(x.phone)+'</a>':'');
+  if(x.done) return h+'<div class="sdone">✓ '+esc(x.done.action)+(x.done.reason?' – '+esc(x.done.reason):'')+(x.done.note?' – '+esc(x.done.note):'')+' · '+esc(x.done.by)+' · '+esc(x.done.at)+'</div></div>';
+  if(r.isPast) return h+'</div>';
+  if(!r.canResolve) return h+'<div style="margin-top:6px;font-size:13px">Waiting for '+esc(r.approver)+' to clear it.</div></div>';
+  var a='\''+esc(x.school)+'\',\''+x.shift+'\',\''+x.check+'\'';
+  if(red){
+    h+='<div class="sact"><input type="number" inputmode="numeric" min="1" step="1" id="sq_'+id+'" placeholder="Parcels">'+
+      '<button class="btn" onclick="supDo('+a+',\'figure\',this)">Enter figure</button></div>'+
+      '<div class="sact"><select id="sr_'+id+'"><option value="">No distribution – reason…</option>'+r.reasons.map(function(z){return '<option>'+esc(z)+'</option>';}).join('')+'</select>'+
+      '<input type="text" id="sn_'+id+'" placeholder="Note (optional)" maxlength="300">'+
+      '<button class="btn no" onclick="supDo('+a+',\'nodist\',this)">Confirm no distribution</button></div>';
+  } else h+='<div class="sact"><button class="btn" onclick="supDo('+a+',\'checked\',this)">Checked</button></div>';
+  return h+'</div>';
+}
+function supRender(){
+  var r=SUP.d, h='';
+  var openR=r.red.filter(function(x){return !x.done;}), openA=r.amber.filter(function(x){return !x.done;});
+  if(r.changed) h+='<div class="bigred"><h3>⚠ Changed since it was downloaded</h3>The order for '+esc(r.label)+' changed after '+esc(r.last.by)+' downloaded it at '+esc(r.last.at)+'. Download it again and send the new file to the supplier.</div>';
+  if(r.red.length) h+='<div class="bigred"><h3>'+(openR.length?'⚠ '+openR.length+' school shift'+(openR.length>1?'s':'')+' working with NO PLAN':'✓ No-plan lines cleared')+'</h3>'+
+    (openR.length?'<div>These schools are working on '+esc(r.label)+' but have no plan.'+(r.canResolve&&!r.isPast?' Enter the figure, or confirm there is no distribution with a reason.':'')+'</div>':'')+
+    r.red.map(function(x){return supLine(x,true);}).join('')+'</div>';
+  if(r.amber.length) h+='<div class="bigamb"><h3>To check – '+openA.length+' open</h3>'+r.amber.map(function(x){return supLine(x,false);}).join('')+'</div>';
+  if(!r.red.length&&!r.amber.length) h+='<div class="ok" style="display:block">✓ No warnings for '+esc(r.label)+'.</div>';
+  h+='<div class="card"><h2>Supplier order – '+esc(r.label)+'</h2>'+
+    '<div class="meta">'+(r.lines?r.parcels+' parcels · '+r.lines+' school shifts':'No order for this day yet.')+(r.updating?' · updating after the last change – the download brings it in first.':'')+'</div>'+
+    (r.last?'<div class="meta">Last downloaded by '+esc(r.last.by)+' at '+esc(r.last.at)+'</div>':'')+
+    '<button class="btn" style="margin-top:10px" '+(r.blocked||!r.lines?'disabled':'')+' onclick="supDownload(this)">⬇ Download Excel – '+esc(r.label)+'</button>'+
+    (r.blocked?'<div class="err" style="display:block">Locked: '+esc(r.approver)+' must clear the red lines first.</div>':'')+'</div>';
+  $('wBody').innerHTML=h;
+}
+function supDo(school,shift,check,action,btn){
+  var id=school+'_'+shift+'_'+check, q='', reason='', note='';
+  if(action==='figure'){ q=String(($('sq_'+id)||{}).value||'').trim(); if(!(+q>0)||Math.floor(+q)!==+q){ show($('wErr'),'Enter the number of parcels (a whole number above 0).'); return; } }
+  if(action==='nodist'){ reason=$('sr_'+id).value; note=$('sn_'+id).value.trim(); if(!reason){ show($('wErr'),'Choose a reason for no distribution.'); return; } if(/^Other/.test(reason)&&!note){ show($('wErr'),'Write a note for "Other".'); return; } }
+  show($('wErr'),''); show($('wOk'),''); btn.disabled=true; busy(true);
+  call('apiSupResolve',S.uid,S.pin,SUP.d.ds,school,shift,check,action,q,reason,note).then(function(r){
+    busy(false); SUP.d=r; supRender();
+    show($('wOk'), action==='figure'?'Plan saved: '+q+' parcels. The supplier order updates within a few minutes – the download brings it in first.':'Recorded.');
+  }).catch(function(e){ busy(false); btn.disabled=false; show($('wErr'),e); });
+}
+function supDownload(btn){
+  btn.disabled=true; busy(true); show($('wErr'),''); show($('wOk'),'');
+  call('apiSupDownload',S.uid,S.pin,SUP.d.ds).then(function(r){
+    busy(false);
+    var bin=atob(r.b64), a=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i);
+    var url=URL.createObjectURL(new Blob([a],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})), l=document.createElement('a');
+    l.href=url; l.download=r.name; document.body.appendChild(l); l.click(); setTimeout(function(){ URL.revokeObjectURL(url); l.remove(); },3000);
+    show($('wOk'),'Downloaded: '+r.name+' – '+r.parcels+' parcels.'); supLoad();
+  }).catch(function(e){ busy(false); btn.disabled=false; show($('wErr'),e); });
+}
+
 /* ---------- warehouse (v9.15): menu changes, returns, delivered numbers to approve ---------- */
 var W = { tab:'menu', d:null, rsid:'', froms:[], q:'' };
 function initWh(){
@@ -2587,7 +2683,9 @@ function initWh(){
   if(!$('wDate').options.length) $('wDate').innerHTML='<option value="'+todayLocal()+'">Today</option>';
   wLoad();
 }
-function wTab(t){ W.tab=t; $('wTabMenu').classList.toggle('on',t==='menu'); $('wTabRet').classList.toggle('on',t==='ret'); show($('wOk'),''); show($('wErr'),''); if(W.d) wRender(); }
+function wTab(t){ W.tab=t; $('wTabMenu').classList.toggle('on',t==='menu'); $('wTabRet').classList.toggle('on',t==='ret'); $('wTabSup').classList.toggle('on',t==='sup'); show($('wOk'),''); show($('wErr'),'');
+  if(t==='sup' && !W.supOnce){ W.supOnce=1; var tm=tomorrowLocal(), o=$('wDate').querySelector('option[value="'+tm+'"]'); if(o && $('wDate').value===todayLocal()){ $('wDate').value=tm; wLoad(); return; } } // v9.46: the order to send is usually tomorrow's
+  if(W.d) wRender(); }
 function wLoad(keepMsg){
   if(keepMsg!==true){ show($('wErr'),''); show($('wOk'),''); }
   swr('wh', $('wBody'), 'apiWh', [S.uid,S.pin,$('wDate').value||todayLocal()], function(r){ if(!W.d||W.d.ds!==r.ds){ W.rsid=''; W.froms=[]; } W.d=r; wRender(); }, function(e){ show($('wErr'),e); });
@@ -2599,8 +2697,10 @@ function wRender(){
   $('wTabRet').classList.toggle('hidden', r.role==='la' && !r.returns.length && false);
   var b='';
   if(r.locked) b+='<div class="warn">'+esc(r.label)+' is in a closed month (the waybill was sent on '+esc(r.lockTs)+') – view only.</div>';
+  if(r.supRed && r.supRed.n) b+='<div class="bigred"><h3>⚠ '+r.supRed.n+' school shift'+(r.supRed.n>1?'s':'')+' working '+esc(r.supRed.label)+' with NO PLAN</h3>Open <b>Supplier order</b> to clear '+(r.supRed.n>1?'them':'it')+' before the order goes to the supplier.</div>'; // v9.46
   $('wBanner').innerHTML=b;
   wApprovals();
+  if(W.tab==='sup'){ supLoad(); return; } // v9.46
   $('wBody').innerHTML = W.tab==='menu' ? wMenuHtml() : wRetHtml();
   if(W.tab==='menu') wMenuSync(); else wRetSync();
 }
