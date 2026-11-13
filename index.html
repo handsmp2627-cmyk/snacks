@@ -396,11 +396,31 @@
     <button class="tile hidden" id="tKitchen" onclick="go('kitchen')" style="border-left-color:#c55a11"><b>Kitchen sandwiches <span id="tKBadge"></span></b><span id="tKText">Sandwiches needed per school, kitchen confirmation and the number distributed.</span></button>
     <button class="tile snk" onclick="go('plan')"><b>Weekly snack plan</b><span id="tPlan">Forecast per school, day and shift.</span></button>
     <button class="tile snk" onclick="go('daily')"><b>Snacks distribution <span id="tDailyBadge"></span></b><span id="tDaily">Received, distributed and leftovers – every day.</span></button>
+    <button class="tile hidden" id="tCi" onclick="go('ci')" style="border-left-color:#0b7a75"><b>Check-in <span id="tCiBadge"></span></b><span>Arrive at and leave a school with one tap – the school QR still works the same way.</span></button>
   </div>
   <div class="card" style="margin-top:14px">
     <h2>Rules</h2>
     <div class="meta" id="rules"></div>
   </div>
+</section>
+
+<!-- CHECK-IN (v9.53) -->
+<section id="v-ci" class="hidden">
+  <div class="card">
+    <h2>Check-in</h2>
+    <div id="ciOpen"></div>
+    <label for="ciSchool">School</label>
+    <select id="ciSchool"></select>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn" onclick="ciGo('in')">Check-in</button>
+      <button class="btn" onclick="ciGo('out')">Check-out</button>
+    </div>
+    <div class="meta" style="margin-top:8px">Your location is taken when you tap. You need a connection. The visit goes to the same record as the school QR.</div>
+  </div>
+  <div class="err" id="ciErr"></div>
+  <div class="ok" id="ciOk"></div>
+  <div id="ciFix"></div>
+  <div class="card hidden" id="ciAppr"><h2>School locations to approve</h2><div id="ciList"></div></div>
 </section>
 
 <!-- SCHOOL INFO -->
@@ -910,6 +930,8 @@ function applyLogin(r, uid, pin){
       $('tHcText').textContent='Registration and headcount per grade and section – view only.';
       $('rules').innerHTML='• <b>School info</b>: view only – students, allergies, recess times, contacts and working days for every school.'+(r.user.dash?'<br>• <b>Dashboard</b>: snacks and kitchen figures for every school – view only.':'');
     }
+    $('tCi').classList.toggle('hidden', !!r.user.infoOnly); // v9.53: Check-in tile
+    if(!r.user.infoOnly && /project officer|project manager/i.test(r.user.role||'')) ciCall('tileinfo').then(function(j){ $('tCiBadge').innerHTML=j.pending?'<span class="badge2">'+j.pending+' to approve</span>':''; }).catch(function(){});
     /* v9.15: Warehouse tile – warehouse monitor, logistics admin and the Project Manager */
     var wh=r.user.wh; S.fix=[]; $('tDailyBadge').innerHTML='';
     $('tWh').classList.toggle('hidden', !wh);
@@ -938,8 +960,115 @@ function lateSeen(){
   call('apiWarnSeen',S.uid,S.pin,ids).then(function(){ busy(false); lateWarn([]); }).catch(function(e){ busy(false); alert(e); });
 }
 function signOut(){ if(S.uid) store('snl|'+S.uid,null); S.user=null; S.pin=''; store('snk_pin',null); go('login'); }
+/* ===== v9.53: Check-in tile – the same visits as the school QR (check-in app), online only. Approvers see school location requests on a map. ===== */
+var CI_URL='https://script.google.com/macros/s/AKfycbyYlUVDJwgaYsQQvA9hhO6wNj5XXb3szsFrIVWee8sxr9yhLpnjRpd2PF2ZcbrEQFq2FA/exec';
+var CI={info:null,last:null,LF:null};
+function ciCall(action,extra){
+  var b={action:action,staffId:S.uid,pin:S.pin}; extra=extra||{}; for(var k in extra) b[k]=extra[k];
+  return fetch(CI_URL,{method:'POST',body:JSON.stringify(b),redirect:'follow'})
+    .then(function(r){ return r.text(); },function(){ throw 'No connection – check your internet and try again.'; })
+    .then(function(t){ var j; try{ j=JSON.parse(t); }catch(e){ throw 'The check-in server is busy. Try again in a few seconds.'; } if(!j.ok) throw ciErrText(j.error); return j; });
+}
+function ciErrText(e){ return ({bad_pin:'Your User ID / PIN is not recognised by the check-in. Ask your Project Officer to check your user.',busy:'The check-in server is busy. Try again in a few seconds.',unknown_school:'This school is not in the check-in list.',not_registered:'Your user is not in the check-in list.',no_location:'No location from your phone.',not_allowed:'Only Project Officers and above can approve.',not_found:'Request not found.',already_approved:'Already approved.',already_rejected:'Already rejected.',already_superseded:'A newer request replaced this one.'})[e]||('Check-in error: '+e); }
+function initCi(){
+  show($('ciErr'),''); show($('ciOk'),''); $('ciFix').innerHTML='';
+  busy(true);
+  ciCall('tileinfo').then(function(j){ busy(false); CI.info=j; ciRender(); if(j.approver) ciLoadList(); else $('ciAppr').classList.add('hidden'); })
+    .catch(function(e){ busy(false); show($('ciErr'),e); });
+}
+function ciRender(){
+  var j=CI.info, keep=$('ciSchool').value;
+  var mine=j.schools.filter(function(s){ return s.mine; }), rest=j.schools.filter(function(s){ return !s.mine; });
+  function opt(s){ return '<option value="'+esc(s.id)+'">'+esc(s.name)+(s.village?' · '+esc(s.village):'')+' ('+esc(s.id)+')</option>'; }
+  $('ciSchool').innerHTML='<option value="">Choose the school</option>'+(mine.length?'<optgroup label="My schools">'+mine.map(opt).join('')+'</optgroup>':'')+'<optgroup label="'+(mine.length?'Other schools':'Schools')+'">'+rest.map(opt).join('')+'</optgroup>';
+  if(j.open){ $('ciSchool').value=j.open.school_id; $('ciOpen').innerHTML='<div class="info">On site at <b>'+esc(j.open.school)+'</b> since '+esc(ciTime(j.open.checkIn))+'. Tap Check-out when you leave.</div>'; }
+  else { $('ciOpen').innerHTML=''; if(keep) $('ciSchool').value=keep; else if(mine.length===1) $('ciSchool').value=mine[0].id; }
+  $('tCiBadge').innerHTML = j.pending ? '<span class="badge2">'+j.pending+' to approve</span>' : '';
+}
+function ciTime(iso){ var d=new Date(iso); return isNaN(d)?'':('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+function ciPos(){
+  return new Promise(function(ok,no){
+    if(!navigator.geolocation) return no('This phone does not give a location.');
+    navigator.geolocation.getCurrentPosition(function(p){ ok(p.coords); }, function(e){ no(e && e.code===1 ? 'Location is blocked – allow location for this page in the browser settings, then try again.' : 'No location yet – step outside or wait a few seconds, then try again.'); }, {enableHighAccuracy:true, timeout:20000, maximumAge:60000});
+  });
+}
+function ciGo(kind){
+  var sid=$('ciSchool').value; show($('ciErr'),''); show($('ciOk'),''); $('ciFix').innerHTML='';
+  if(!sid){ show($('ciErr'),'Choose the school first.'); return; }
+  busy(true);
+  ciPos().then(function(c){
+    CI.last={school:sid};
+    return ciCall('tile',{school:sid, kind:kind, lat:c.latitude, lng:c.longitude, acc:c.accuracy, scanId:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)});
+  }).then(function(r){
+    busy(false);
+    var t=ciTime(r.time), msg;
+    if(r.kind==='out') msg=r.duplicate?'Already checked out at '+r.school+' ('+t+').':'Checked out of '+r.school+' at '+t+(r.minutes!=null?' – '+r.minutes+' min on site.':'.');
+    else msg=r.duplicate?'Already checked in at '+r.school+' ('+t+').':'Checked in at '+r.school+' at '+t+'.';
+    show($('ciOk'),msg);
+    if(r.outside) ciFixOffer(r);
+    else if(r.weak) $('ciFix').innerHTML='<div class="warn">Your phone\'s location was not precise (weak GPS). The visit is recorded and flagged.</div>';
+    return ciCall('tileinfo').then(function(j){ CI.info=j; ciRender(); });
+  }).catch(function(e){ busy(false); show($('ciErr'),e); });
+}
+function ciFixOffer(r){
+  $('ciFix').innerHTML='<div class="card"><div class="warn">You are about <b>'+esc(r.distance)+' m</b> from the point saved for '+esc(r.school)+'. The visit is recorded and flagged.</div>'+
+    '<b>Wrong school address?</b><div class="meta">If you are at the school now, send your current location as the school\'s point. Your Project Officer checks it on a map before it changes.</div>'+
+    '<label for="ciNote">Note (optional)</label><input id="ciNote" maxlength="200" placeholder="e.g. main gate, new building">'+
+    '<button class="btn" style="margin-top:10px" onclick="ciFixSend()">Send my location for this school</button></div>';
+}
+function ciFixSend(){
+  if(!CI.last) return; busy(true);
+  ciPos().then(function(c){ return ciCall('locreq',{school:CI.last.school, lat:c.latitude, lng:c.longitude, acc:c.accuracy, note:($('ciNote')||{}).value||''}); })
+    .then(function(r){ busy(false); $('ciFix').innerHTML='<div class="ok">Sent ('+esc(r.id)+'). Your Project Officer will approve or reject the new point for '+esc(r.school)+'.</div>'; })
+    .catch(function(e){ busy(false); show($('ciErr'),e); });
+}
+/* Project Officer / Senior PO / PM: each request on a map – blue = point saved now, red = proposed point (circle = GPS accuracy). */
+function ciLoadList(){
+  ciCall('loclist').then(function(j){
+    $('ciAppr').classList.remove('hidden');
+    if(!j.list.length){ $('ciList').innerHTML='<div class="meta">Nothing to approve.</div>'; return; }
+    function gm(q){ return 'https://www.google.com/maps/search/?api=1&query='+q.lat+','+q.lng; }
+    $('ciList').innerHTML=j.list.map(function(x,i){
+      var p=x.prop, c=x.cur;
+      return '<div class="card" style="margin:10px 0"><b>'+esc(x.school)+'</b> <span class="meta">('+esc(x.school_id)+')</span>'+
+        '<div class="meta">Sent by '+esc(x.by)+' · '+esc(x.at?new Date(x.at).toLocaleString():'')+' · GPS accuracy '+esc(x.acc)+' m'+(x.dist!==''?' · '+esc(x.dist)+' m from the current point':' · no point saved yet')+(x.note?' · “'+esc(x.note)+'”':'')+'</div>'+
+        '<div id="ciMap'+i+'" style="height:240px;border-radius:10px;margin:8px 0;background:#eef1f6"></div>'+
+        '<div class="meta"><span style="color:#1f5fd6">●</span> current point '+(c?'<a href="'+gm(c)+'" target="_blank">open</a>':'(none)')+' &nbsp; <span style="color:#c00000">●</span> proposed point <a href="'+gm(p)+'" target="_blank">open</a></div>'+
+        '<div style="display:flex;gap:8px;margin-top:8px"><button class="btn" onclick="ciDecide(\''+esc(x.id)+'\',\'approve\')">Approve new point</button><button class="btn" style="background:#888" onclick="ciDecide(\''+esc(x.id)+'\',\'reject\')">Reject</button></div></div>';
+    }).join('');
+    ciMaps(j.list);
+  }).catch(function(e){ show($('ciErr'),e); });
+}
+function ciLeaflet(){
+  if(CI.LF) return Promise.resolve(CI.LF);
+  return new Promise(function(ok,no){
+    var css=document.createElement('link'); css.rel='stylesheet'; css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(css);
+    var s=document.createElement('script'); s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    s.onload=function(){ var lf=window.L; CI.LF=(lf && lf.noConflict) ? lf.noConflict() : lf; ok(CI.LF); }; s.onerror=function(){ no(); };
+    document.head.appendChild(s);
+  });
+}
+function ciMaps(list){
+  ciLeaflet().then(function(LF){
+    list.forEach(function(x,i){
+      var el=$('ciMap'+i); if(!el) return;
+      var m=LF.map(el), pts=[];
+      LF.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(m);
+      if(x.cur){ LF.circleMarker([x.cur.lat,x.cur.lng],{radius:8,color:'#1f5fd6',fillOpacity:.8}).addTo(m).bindTooltip('Current point'); pts.push([x.cur.lat,x.cur.lng]); }
+      LF.circleMarker([x.prop.lat,x.prop.lng],{radius:8,color:'#c00000',fillOpacity:.8}).addTo(m).bindTooltip('Proposed point'); pts.push([x.prop.lat,x.prop.lng]);
+      if(Number(x.acc)) LF.circle([x.prop.lat,x.prop.lng],{radius:Number(x.acc),color:'#c00000',weight:1,fillOpacity:.08}).addTo(m);
+      if(pts.length>1) m.fitBounds(pts,{padding:[30,30],maxZoom:18}); else m.setView(pts[0],17);
+    });
+  }).catch(function(){ list.forEach(function(x,i){ var el=$('ciMap'+i); if(el) el.innerHTML='<div class="meta" style="padding:10px">The map could not load – use the “open” links.</div>'; }); });
+}
+function ciDecide(id,d){
+  if(!confirm(d==='approve'?'Approve the new point? New check-ins at this school will be measured from it.':'Reject this request?')) return;
+  busy(true);
+  ciCall('locdecide',{id:id,decision:d}).then(function(r){ busy(false); show($('ciOk'),r.school+': '+(r.status==='Approved'?'new point approved.':'request rejected.')); ciLoadList(); return ciCall('tileinfo').then(function(j){ CI.info=j; ciRender(); }); })
+    .catch(function(e){ busy(false); show($('ciErr'),e); });
+}
 function go(v){
-  ['login','home','info','plan','daily','kitchen','hc','dash','wh'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
+  ['login','home','info','plan','daily','kitchen','hc','dash','wh','ci'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
   if(typeof dbTipOff==='function') dbTipOff();
   $('btnBack').classList.toggle('hidden', v==='login'||v==='home');
   $('btnOut').classList.toggle('hidden', v==='login');
@@ -951,6 +1080,7 @@ function go(v){
   if(v==='hc') initHc();
   if(v==='dash') initDash();
   if(v==='wh') initWh();
+  if(v==='ci') initCi(); // v9.53
   if(v==='home') refreshInfoBadge();
   window.scrollTo(0,0);
 }
