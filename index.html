@@ -756,7 +756,7 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbyzRf6yjLSRwU1wY_KvcIIGY4
 var S = { user:null, uid:'', pin:'', schools:[], reasons:[], plan:null, daily:null, now:null };
 function $(id){ return document.getElementById(id); }
 /* Calls that are safe to repeat automatically if Google returns an error page (busy server). */
-var NO_RETRY = { apiSupResolve:1, apiSupDownload:1, apiRecessDay:1, apiWhReturnType:1, apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
+var NO_RETRY = { apiSupResolve:1, apiSupDownload:1, apiSupVouchers:1, apiRecessDay:1, apiWhReturnType:1, apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
 var DEBUG = /[?&]debug=1/.test(location.search);
 function dbg(fn, srv, tot){ var d=$('dbg'); if(!d){ d=document.createElement('div'); d.id='dbg'; d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#111;color:#0f0;font:11px monospace;padding:4px 8px;z-index:40;max-height:30vh;overflow:auto'; document.body.appendChild(d); }
   d.innerHTML='<div>'+fn+': server '+(srv/1000).toFixed(2)+' s · total '+(tot/1000).toFixed(2)+' s · Google/network '+((tot-srv)/1000).toFixed(2)+' s</div>'+d.innerHTML; }
@@ -2782,6 +2782,7 @@ function supRender(){
     '<div class="meta">'+(r.lines?r.parcels+' parcels · '+r.lines+' school shifts':'No order for this day yet.')+(r.updating?' · updating after the last change – the download brings it in first.':'')+'</div>'+
     (r.last?'<div class="meta">Last downloaded by '+esc(r.last.by)+' at '+esc(r.last.at)+'</div>':'')+
     '<button class="btn" style="margin-top:10px" '+(r.blocked||!r.lines?'disabled':'')+' onclick="supDownload(this)">⬇ Download Excel – '+esc(r.label)+'</button>'+
+    ' <button class="btn" style="margin-top:10px" '+(r.blocked||!r.lines?'disabled':'')+' onclick="supVouchers(this)">⬇ Delivery vouchers (Word) – '+esc(r.label)+'</button>'+
     (r.blocked?'<div class="err" style="display:block">Locked: '+esc(r.approver)+' must clear the red lines first.</div>':'')+'</div>';
   $('wBody').innerHTML=h;
 }
@@ -2793,6 +2794,16 @@ function supDo(school,shift,check,action,btn){
   call('apiSupResolve',S.uid,S.pin,SUP.d.ds,school,shift,check,action,q,reason,note).then(function(r){
     busy(false); SUP.d=r; supRender();
     show($('wOk'), action==='figure'?'Plan saved: '+q+' parcels. The supplier order updates within a few minutes – the download brings it in first.':'Recorded.');
+  }).catch(function(e){ busy(false); btn.disabled=false; show($('wErr'),e); });
+}
+function supVouchers(btn){ // v9.57: the supplier's delivery vouchers for the day, filled from the supplier order
+  btn.disabled=true; busy(true); show($('wErr'),''); show($('wOk'),'');
+  call('apiSupVouchers',S.uid,S.pin,SUP.d.ds).then(function(r){
+    busy(false); btn.disabled=false;
+    var bin=atob(r.b64), a=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i);
+    var url=URL.createObjectURL(new Blob([a],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})), l=document.createElement('a');
+    l.href=url; l.download=r.name; document.body.appendChild(l); l.click(); setTimeout(function(){ URL.revokeObjectURL(url); l.remove(); },3000);
+    show($('wOk'),'Downloaded: '+r.name+' – '+r.schools+' schools, '+r.parcels+' parcels.'+(r.noRow&&r.noRow.length?' No waybill row found for: '+r.noRow.join(', ')+'.':''));
   }).catch(function(e){ busy(false); btn.disabled=false; show($('wErr'),e); });
 }
 function supDownload(btn){
