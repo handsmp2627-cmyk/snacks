@@ -720,7 +720,7 @@
   </div>
   <div class="card">
     <h2>Warehouse</h2>
-    <div class="seg" id="wTabs"><button id="wTabMenu" class="on" onclick="wTab('menu')">Menu changes<small>other snacks, same parcels</small></button><button id="wTabRet" onclick="wTab('ret')">Returns<small>back to the supplier</small></button><button id="wTabSup" onclick="wTab('sup')">Supplier order<small>checks and Excel</small></button></div>
+    <div class="seg" id="wTabs"><button id="wTabMenu" class="on" onclick="wTab('menu')">Menu changes<small>other snacks, same parcels</small></button><button id="wTabRet" onclick="wTab('ret')">Returns<small>back to the supplier</small></button><button id="wTabSup" onclick="wTab('sup')">Supplier order<small>checks and Excel</small></button><button id="wTabTrk" onclick="wTab('trk')">Trucks<small>schools per truck</small></button></div>
     <label for="wDate">Day</label>
     <select id="wDate" onchange="wLoad()"></select>
     <div id="wBanner"></div>
@@ -756,7 +756,7 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbyzRf6yjLSRwU1wY_KvcIIGY4
 var S = { user:null, uid:'', pin:'', schools:[], reasons:[], plan:null, daily:null, now:null };
 function $(id){ return document.getElementById(id); }
 /* Calls that are safe to repeat automatically if Google returns an error page (busy server). */
-var NO_RETRY = { apiSupResolve:1, apiSupDownload:1, apiSupVouchers:1, apiRecessDay:1, apiWhReturnType:1, apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
+var NO_RETRY = { apiTrkDownload:1, apiSupResolve:1, apiSupDownload:1, apiSupVouchers:1, apiRecessDay:1, apiWhReturnType:1, apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
 var DEBUG = /[?&]debug=1/.test(location.search);
 function dbg(fn, srv, tot){ var d=$('dbg'); if(!d){ d=document.createElement('div'); d.id='dbg'; d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#111;color:#0f0;font:11px monospace;padding:4px 8px;z-index:40;max-height:30vh;overflow:auto'; document.body.appendChild(d); }
   d.innerHTML='<div>'+fn+': server '+(srv/1000).toFixed(2)+' s · total '+(tot/1000).toFixed(2)+' s · Google/network '+((tot-srv)/1000).toFixed(2)+' s</div>'+d.innerHTML; }
@@ -2743,6 +2743,50 @@ function hhmm(){ try{ return new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Bei
 function planDirty(){ try{ return !!(S.plan && !$('v-plan').classList.contains('hidden') && changedInputs().length); }catch(e){ return false; } }
 window.addEventListener('beforeunload', function(e){ if(planDirty()){ e.preventDefault(); e.returnValue=''; } });
 
+/* ---------- v9.58: Warehouse tile → Trucks (schools per truck, crates of 30) ---------- */
+var TRK = { d:null };
+function trkLoadUi(){
+  var ds=$('wDate').value||todayLocal();
+  $('wBody').innerHTML='<div class="card"><div class="meta">Preparing the trucks for this day…</div></div>';
+  call('apiTrk',S.uid,S.pin,ds).then(function(r){ TRK.d=r; if(W.tab==='trk' && ($('wDate').value||todayLocal())===r.ds) trkRender(); })
+    .catch(function(e){ show($('wErr'),e); $('wBody').innerHTML=''; });
+}
+function trkRender(){
+  var r=TRK.d, h='', n=function(x){ return Number(x||0).toLocaleString('en-US'); };
+  h+='<div class="card"><h2>Schools per truck – '+esc(r.label)+'</h2>';
+  if(r.none){ $('wBody').innerHTML=h+'<div class="meta">'+esc(r.none)+'</div></div>'; return; }
+  h+='<div class="meta">'+r.trucks.length+' trucks · '+r.schools+' schools · '+n(r.parcels)+' parcels · crates of '+r.crate+'. From the supplier order of the day; trucks, drivers and school order from the warehouse Trucks tab.</div>'+
+    (r.updating?'<div class="meta">Updating after the last change – the download brings it in first.</div>':'')+
+    '<button class="btn" style="margin-top:10px" '+(r.blocked?'disabled':'')+' onclick="trkDownload(this)">⬇ Schools per truck (Excel) – '+esc(r.label)+'</button>'+
+    (r.blocked?'<div class="err" style="display:block">Locked: '+esc(r.approver)+' must clear the red lines in Supplier order first.</div>':'')+
+    (r.noTruck&&r.noTruck.length?'<div class="warn" style="display:block;margin-top:8px">No truck in the Trucks tab for: <span dir="auto">'+esc(r.noTruck.join('، '))+'</span></div>':'')+'</div>';
+  r.trucks.forEach(function(t){
+    var cr=0, lo=0; t.packList.forEach(function(p){ cr+=p.crates; lo+=p.loose; });
+    h+='<div class="card"><h2 dir="auto">'+esc(t.driver||t.truck)+(t.driver?' <small style="font-weight:400">('+esc(t.truck)+')</small>':'')+'</h2>'+
+      '<div class="meta">'+(t.phone?'<a href="tel:'+esc(String(t.phone).replace(/[^0-9+]/g,''))+'">📞 '+esc(t.phone)+'</a> · ':'')+t.schools.length+' schools · '+n(t.parcels)+' parcels · '+cr+' full crates + '+lo+' loose</div>'+
+      '<div style="overflow-x:auto"><table class="hist"><tr><th>#</th><th>School</th><th>Pack</th><th>Parcels</th><th>Full crates</th><th>Loose</th></tr>';
+    t.schools.forEach(function(s,i){
+      s.packs.forEach(function(p,j){
+        h+='<tr'+(j?'':' style="border-top:2px solid #ccc"')+'>'+(j?'<td></td><td></td>':'<td>'+(i+1)+'</td><td dir="auto"><b>'+esc(s.name)+'</b>'+(s.en?'<br><small>'+esc(s.en)+'</small>':'')+'</td>')+
+          '<td dir="auto">'+esc(p.ar)+'</td><td>'+n(p.q)+'</td><td>'+p.crates+'</td><td>'+p.loose+'</td></tr>';
+      });
+    });
+    t.packList.forEach(function(p,j){ h+='<tr style="font-weight:600'+(j?'':';border-top:2px solid #333')+'"><td></td><td>'+(j?'':'Total')+'</td><td dir="auto">'+esc(p.ar)+'</td><td>'+n(p.q)+'</td><td>'+p.crates+'</td><td>'+p.loose+'</td></tr>'; });
+    h+='</table></div></div>';
+  });
+  $('wBody').innerHTML=h;
+}
+function trkDownload(btn){
+  btn.disabled=true; busy(true); show($('wErr'),''); show($('wOk'),'');
+  call('apiTrkDownload',S.uid,S.pin,TRK.d.ds).then(function(r){
+    busy(false); btn.disabled=false;
+    var bin=atob(r.b64), a=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i);
+    var url=URL.createObjectURL(new Blob([a],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})), l=document.createElement('a');
+    l.href=url; l.download=r.name; document.body.appendChild(l); l.click(); setTimeout(function(){ URL.revokeObjectURL(url); l.remove(); },3000);
+    show($('wOk'),'Downloaded: '+r.name+' – '+r.trucks+' trucks, '+r.schools+' schools, '+r.parcels+' parcels.'+(r.noTruck&&r.noTruck.length?' No truck for: '+r.noTruck.join(', ')+'.':''));
+  }).catch(function(e){ busy(false); btn.disabled=false; show($('wErr'),e); });
+}
+
 /* ---------- v9.46: Warehouse tile → Supplier order (checks before the Excel download) ---------- */
 var SUP = { d:null };
 function tomorrowLocal(){ var d=new Date(todayLocal()+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()+1); return d.toISOString().substr(0,10); }
@@ -2824,8 +2868,8 @@ function initWh(){
   if(!$('wDate').options.length) $('wDate').innerHTML='<option value="'+todayLocal()+'">Today</option>';
   wLoad();
 }
-function wTab(t){ W.tab=t; $('wTabMenu').classList.toggle('on',t==='menu'); $('wTabRet').classList.toggle('on',t==='ret'); $('wTabSup').classList.toggle('on',t==='sup'); show($('wOk'),''); show($('wErr'),'');
-  if(t==='sup' && !W.supOnce){ W.supOnce=1; var tm=tomorrowLocal(), o=$('wDate').querySelector('option[value="'+tm+'"]'); if(o && $('wDate').value===todayLocal()){ $('wDate').value=tm; wLoad(); return; } } // v9.46: the order to send is usually tomorrow's
+function wTab(t){ W.tab=t; $('wTabMenu').classList.toggle('on',t==='menu'); $('wTabRet').classList.toggle('on',t==='ret'); $('wTabSup').classList.toggle('on',t==='sup'); $('wTabTrk').classList.toggle('on',t==='trk'); show($('wOk'),''); show($('wErr'),'');
+  if((t==='sup'||t==='trk') && !W.supOnce){ W.supOnce=1; var tm=tomorrowLocal(), o=$('wDate').querySelector('option[value="'+tm+'"]'); if(o && $('wDate').value===todayLocal()){ $('wDate').value=tm; wLoad(); return; } } // v9.46: the order to send is usually tomorrow's
   if(W.d) wRender(); }
 function wLoad(keepMsg){
   if(keepMsg!==true){ show($('wErr'),''); show($('wOk'),''); }
@@ -2841,7 +2885,7 @@ function wRender(){
   if(r.supRed && r.supRed.n) b+='<div class="bigred"><h3>⚠ '+r.supRed.n+' school shift'+(r.supRed.n>1?'s':'')+' working '+esc(r.supRed.label)+' with NO PLAN</h3>Open <b>Supplier order</b> to clear '+(r.supRed.n>1?'them':'it')+' before the order goes to the supplier.</div>'; // v9.46
   $('wBanner').innerHTML=b;
   wApprovals();
-  if(W.tab==='sup'){ supLoad(); return; } // v9.46
+  if(W.tab==='sup'){ supLoad(); return; } if(W.tab==='trk'){ trkLoadUi(); return; } // v9.46
   $('wBody').innerHTML = W.tab==='menu' ? wMenuHtml() : wRetHtml();
   if(W.tab==='menu') wMenuSync(); else wRetSync();
 }
