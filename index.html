@@ -2755,7 +2755,7 @@ function trkRender(){
   var r=TRK.d, h='', n=function(x){ return Number(x||0).toLocaleString('en-US'); };
   h+='<div class="card"><h2>Schools per truck – '+esc(r.label)+'</h2>';
   if(r.none){ $('wBody').innerHTML=h+'<div class="meta">'+esc(r.none)+'</div></div>'; return; }
-  h+='<div class="meta">'+r.trucks.length+' trucks · '+r.schools+' schools · '+n(r.parcels)+' parcels · <b>'+n(r.full)+' full crates</b> ('+r.crate+' per crate; loose parcels not counted). From the supplier order of the day; trucks, drivers and school order from the warehouse Trucks tab.</div>'+
+  h+='<div class="meta">'+r.trucks.length+' trucks · '+r.schools+' schools · '+n(r.parcels)+' parcels · <b>'+n(r.full)+' full crates</b> ('+r.crate+' per crate; loose parcels not counted). From the supplier order of the day; trucks, drivers and school order from the warehouse Trucks tab. <b style="color:#b00020">*****</b> = DTT school (give the DTT too).</div>'+
     (r.updating?'<div class="meta">Updating after the last change – the download brings it in first.</div>':'')+
     '<button class="btn" style="margin-top:10px" '+(r.blocked?'disabled':'')+' onclick="trkDownload(this)">⬇ Schools per truck (Excel) – '+esc(r.label)+'</button>'+
     (r.blocked?'<div class="err" style="display:block">Locked: '+esc(r.approver)+' must clear the red lines in Supplier order first.</div>':'')+
@@ -2767,7 +2767,7 @@ function trkRender(){
       '<div style="overflow-x:auto"><table class="hist"><tr><th>#</th><th>School</th><th>Pack</th><th>Parcels</th><th>Full crates</th><th>Loose</th></tr>';
     t.schools.forEach(function(s,i){
       s.packs.forEach(function(p,j){
-        h+='<tr'+(j?'':' style="border-top:2px solid #ccc"')+'>'+(j?'<td></td><td></td>':'<td>'+(i+1)+'</td><td dir="auto"><b>'+esc(s.name)+'</b>'+(s.en?'<br><small>'+esc(s.en)+'</small>':'')+'</td>')+
+        h+='<tr'+(j?'':' style="border-top:2px solid #ccc"')+'>'+(j?'<td></td><td></td>':'<td>'+(i+1)+'</td><td dir="auto"><b>'+(s.dtt?'<span style="color:#b00020">***** </span>':'')+esc(s.name)+'</b>'+(s.en?'<br><small>'+esc(s.en)+'</small>':'')+'</td>')+
           '<td dir="auto">'+esc(p.ar)+'</td><td>'+n(p.q)+'</td><td>'+p.crates+'</td><td>'+p.loose+'</td></tr>';
       });
     });
