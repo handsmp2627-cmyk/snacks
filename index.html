@@ -2755,7 +2755,7 @@ function trkRender(){
   var r=TRK.d, h='', n=function(x){ return Number(x||0).toLocaleString('en-US'); };
   h+='<div class="card"><h2>Schools per truck – '+esc(r.label)+'</h2>';
   if(r.none){ $('wBody').innerHTML=h+'<div class="meta">'+esc(r.none)+'</div></div>'; return; }
-  h+='<div class="meta">'+r.trucks.length+' trucks · '+r.schools+' schools · '+n(r.parcels)+' parcels · <b>'+n(r.full+r.part)+' crates</b> ('+n(r.full)+' full + '+r.part+' part, '+r.crate+' per crate). From the supplier order of the day; trucks, drivers and school order from the warehouse Trucks tab.</div>'+
+  h+='<div class="meta">'+r.trucks.length+' trucks · '+r.schools+' schools · '+n(r.parcels)+' parcels · <b>'+n(r.full)+' full crates</b> ('+r.crate+' per crate; loose parcels not counted). From the supplier order of the day; trucks, drivers and school order from the warehouse Trucks tab.</div>'+
     (r.updating?'<div class="meta">Updating after the last change – the download brings it in first.</div>':'')+
     '<button class="btn" style="margin-top:10px" '+(r.blocked?'disabled':'')+' onclick="trkDownload(this)">⬇ Schools per truck (Excel) – '+esc(r.label)+'</button>'+
     (r.blocked?'<div class="err" style="display:block">Locked: '+esc(r.approver)+' must clear the red lines in Supplier order first.</div>':'')+
@@ -2763,7 +2763,7 @@ function trkRender(){
   r.trucks.forEach(function(t){
     var cr=0, lo=0; t.packList.forEach(function(p){ cr+=p.crates; lo+=p.loose; });
     h+='<div class="card"><h2 dir="auto">'+esc(t.driver||t.truck)+(t.driver?' <small style="font-weight:400">('+esc(t.truck)+')</small>':'')+'</h2>'+
-      '<div class="meta">'+(t.phone?'<a href="tel:'+esc(String(t.phone).replace(/[^0-9+]/g,''))+'">📞 '+esc(t.phone)+'</a> · ':'')+t.schools.length+' schools · '+n(t.parcels)+' parcels · <b>'+(t.full+t.part)+' crates</b> ('+t.full+' full + '+t.part+' part, '+lo+' loose parcels)</div>'+
+      '<div class="meta">'+(t.phone?'<a href="tel:'+esc(String(t.phone).replace(/[^0-9+]/g,''))+'">📞 '+esc(t.phone)+'</a> · ':'')+t.schools.length+' schools · '+n(t.parcels)+' parcels · <b>'+t.full+' full crates</b> + '+lo+' loose parcels</div>'+
       '<div style="overflow-x:auto"><table class="hist"><tr><th>#</th><th>School</th><th>Pack</th><th>Parcels</th><th>Full crates</th><th>Loose</th></tr>';
     t.schools.forEach(function(s,i){
       s.packs.forEach(function(p,j){
@@ -2772,7 +2772,7 @@ function trkRender(){
       });
     });
     t.packList.forEach(function(p,j){ h+='<tr style="font-weight:600'+(j?'':';border-top:2px solid #333')+'"><td></td><td>'+(j?'':'Total')+'</td><td dir="auto">'+esc(p.ar)+'</td><td>'+n(p.q)+'</td><td>'+p.crates+'</td><td>'+p.loose+'</td></tr>'; });
-    h+='<tr style="font-weight:700;border-top:2px solid #333"><td></td><td colspan="2">Total crates (full + part)</td><td></td><td colspan="2">'+(t.full+t.part)+' ('+t.full+' + '+t.part+')</td></tr>'; // v9.59
+    h+='<tr style="font-weight:700;border-top:2px solid #333"><td></td><td colspan="2">Total crates (full only)</td><td></td><td colspan="2">'+t.full+'</td></tr>'; // v9.60
     h+='</table></div></div>';
   });
   $('wBody').innerHTML=h;
