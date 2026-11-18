@@ -429,6 +429,24 @@
     <h2>Waiting for your approval</h2>
     <div id="iApproveList"></div>
   </div>
+  <div class="card hidden" id="stCard">
+    <h2>Strike / holiday – all schools</h2>
+    <div class="meta">Sets a day off for every school: no snacks and no kitchen meals. Plans already entered for that day are removed and the warehouse monitor is told by email.</div>
+    <div id="stList"></div>
+    <button class="btn" id="stBtn" onclick="stOpen()" style="background:#9c0006">Strike / holiday</button>
+    <div id="stBox" class="hidden">
+      <div class="row2">
+        <div><label for="stDay">Day</label><input id="stDay" type="date"></div>
+        <div><label for="stType">Type</label><select id="stType"></select></div>
+      </div>
+      <label for="stNote">Note (optional)</label>
+      <input id="stNote" maxlength="120" placeholder="e.g. teachers' strike announced by the ministry">
+      <button class="btn" onclick="stSave()" style="background:#9c0006">Set all schools off</button>
+      <button class="btn sec" onclick="stClose()">Cancel</button>
+    </div>
+    <div class="err" id="stErr"></div>
+    <div class="ok" id="stOk"></div>
+  </div>
   <div class="card">
     <h2>School info</h2>
     <label for="iSchool">School</label>
@@ -756,7 +774,7 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbyzRf6yjLSRwU1wY_KvcIIGY4
 var S = { user:null, uid:'', pin:'', schools:[], reasons:[], plan:null, daily:null, now:null };
 function $(id){ return document.getElementById(id); }
 /* Calls that are safe to repeat automatically if Google returns an error page (busy server). */
-var NO_RETRY = { apiTrkDownload:1, apiSupResolve:1, apiSupDownload:1, apiSupVouchers:1, apiRecessDay:1, apiWhReturnType:1, apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
+var NO_RETRY = { apiStrikeSet:1, apiStrikeRemove:1, apiTrkDownload:1, apiSupResolve:1, apiSupDownload:1, apiSupVouchers:1, apiRecessDay:1, apiWhReturnType:1, apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
 var DEBUG = /[?&]debug=1/.test(location.search);
 function dbg(fn, srv, tot){ var d=$('dbg'); if(!d){ d=document.createElement('div'); d.id='dbg'; d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#111;color:#0f0;font:11px monospace;padding:4px 8px;z-index:40;max-height:30vh;overflow:auto'; document.body.appendChild(d); }
   d.innerHTML='<div>'+fn+': server '+(srv/1000).toFixed(2)+' s · total '+(tot/1000).toFixed(2)+' s · Google/network '+((tot-srv)/1000).toFixed(2)+' s</div>'+d.innerHTML; }
@@ -1498,6 +1516,7 @@ function initInfo(){
   $('oCard').classList.add('hidden');
   $('iBody').classList.add('hidden');
   loadApprovals();
+  stInit(); // v9.63
 }
 function loadApprovals(){
   if(!S.user.canOverride){ $('iApprove').classList.add('hidden'); return; }
@@ -1566,6 +1585,47 @@ function renderInfo(){
   renderRecess();
   renderAlg();
   renderDrop();
+}
+
+/* ---------- v9.63: Strike / holiday – all schools off on a day (Senior Project Officers and the PM) ---------- */
+function stOn(){ return !!(S.user && (S.user.strike || /^(Project Manager|Senior (Project Officer|PO|Officer))/i.test(S.user.role||''))); }
+function stInit(){
+  var c=$('stCard'); if(!c) return;
+  var on=stOn(); c.classList.toggle('hidden',!on); if(!on) return;
+  stClose(); show($('stErr'),''); show($('stOk'),''); stLoad();
+}
+function stLoad(){
+  call('apiStrikeList',S.uid,S.pin).then(function(r){
+    S.st=r;
+    $('stType').innerHTML=r.types.map(function(t){return '<option>'+esc(t)+'</option>';}).join('');
+    $('stDay').min=r.today;
+    var d=r.days.filter(function(x){return x.ds>=r.today;});
+    $('stList').innerHTML = d.length ? '<div class="sec">Days off already set</div>'+d.map(function(x){
+      return '<div class="req"><b>'+esc(x.label)+'</b> – '+esc(x.type)+(x.canRemove?'<div class="act"><button class="btn sec" onclick="stRemove(\''+x.ds+'\',this)">Remove – make it a normal day</button></div>':'')+'</div>';
+    }).join('') : '';
+  }).catch(function(e){ var m=(e&&e.msg)||e; if(/Only Senior/.test(m)){ $('stCard').classList.add('hidden'); return; } show($('stErr'),'Could not load the days off: '+m); });
+}
+function stOpen(){ $('stBox').classList.remove('hidden'); $('stBtn').classList.add('hidden'); show($('stOk'),''); show($('stErr'),''); if(!$('stDay').value && S.st) $('stDay').value=S.st.tomorrow||''; }
+function stClose(){ $('stBox').classList.add('hidden'); $('stBtn').classList.remove('hidden'); }
+function stDayLabel(ds){ try{ return new Date(ds+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }catch(e){ return ds; } }
+function stSave(){
+  var ds=$('stDay').value, ty=$('stType').value, nt=$('stNote').value.trim();
+  show($('stErr'),''); show($('stOk'),'');
+  if(!ds){ show($('stErr'),'Choose the day.'); return; }
+  if(S.st && ds<S.st.today){ show($('stErr'),'This day has passed. Choose today or a later day.'); return; }
+  if(!confirm('Set '+stDayLabel(ds)+' as OFF for ALL schools ('+ty+')?\n\nNo snacks and no kitchen meals that day. Plans already entered for that day will be removed.')) return;
+  busy(true);
+  call('apiStrikeSet',S.uid,S.pin,ds,ty,nt).then(function(r){
+    busy(false); stClose(); $('stNote').value=''; $('stDay').value='';
+    show($('stOk'),'✓ '+r.label+' is off for all schools ('+ty+'). '+(r.removed?r.removed+' plan entries for that day were removed. ':'')+(r.mailed?'The warehouse monitor was told by email.':''));
+    stLoad();
+  }).catch(function(e){ busy(false); show($('stErr'),(e&&e.msg)||e); });
+}
+function stRemove(ds,btn){
+  if(!confirm('Make '+stDayLabel(ds)+' a normal school day again?\n\nPlans removed earlier do not come back – monitors will need to enter them.')) return;
+  if(btn) btn.disabled=true; busy(true);
+  call('apiStrikeRemove',S.uid,S.pin,ds).then(function(r){ busy(false); show($('stOk'),'✓ '+r.label+' is a normal school day again. Monitors can enter its plan.'); stLoad(); })
+  .catch(function(e){ busy(false); if(btn) btn.disabled=false; show($('stErr'),(e&&e.msg)||e); });
 }
 /* ---------- v9.41: PM recess by day ---------- */
 var RC={day:-1};
