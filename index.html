@@ -991,7 +991,7 @@ function ciCall(action,extra){
     .then(function(r){ return r.text(); },function(){ throw 'No connection – check your internet and try again.'; })
     .then(function(t){ var j; try{ j=JSON.parse(t); }catch(e){ throw 'The check-in server is busy. Try again in a few seconds.'; } if(!j.ok) throw ciErrText(j.error); return j; });
 }
-function ciErrText(e){ return ({bad_pin:'Your User ID / PIN is not recognised by the check-in. Ask your Project Officer to check your user.',busy:'The check-in server is busy. Try again in a few seconds.',unknown_school:'This school is not in the check-in list.',not_registered:'Your user is not in the check-in list.',no_location:'No location from your phone.',not_allowed:'Only Project Officers and above can approve.',not_found:'Request not found.',already_approved:'Already approved.',already_rejected:'Already rejected.',already_superseded:'A newer request replaced this one.'})[e]||('Check-in error: '+e); }
+function ciErrText(e){ return ({bad_pin:'Your User ID / PIN is not recognised by the check-in. Ask your Project Officer to check your user.',busy:'The check-in server is busy. Try again in a few seconds.',unknown_school:'This school is not in the check-in list.',not_registered:'Your user is not in the check-in list.',no_location:'No location from your phone.',far_location:'Your phone gave a location far away from any school, so this was not recorded. Turn location off and on again, step outside, wait a few seconds and try again.',not_allowed:'Only Project Officers and above can approve.',not_found:'Request not found.',already_approved:'Already approved.',already_rejected:'Already rejected.',already_superseded:'A newer request replaced this one.'})[e]||('Check-in error: '+e); }
 function initCi(){
   show($('ciErr'),''); show($('ciOk'),''); $('ciFix').innerHTML='';
   busy(true);
@@ -1008,17 +1008,34 @@ function ciRender(){
   $('tCiBadge').innerHTML = j.pending ? '<span class="badge2">'+j.pending+' to approve</span>' : '';
 }
 function ciTime(iso){ var d=new Date(iso); return isNaN(d)?'':('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+/* v4.7 (24 Nov 2026): same location handling as the QR check-in page – listen up to 15 s and keep the most precise
+   reading (stop early at 15 m or better); if nothing comes (often indoors), accept the phone's last position from the past 5 minutes. */
 function ciPos(){
   return new Promise(function(ok,no){
     if(!navigator.geolocation) return no('This phone does not give a location.');
-    navigator.geolocation.getCurrentPosition(function(p){ ok(p.coords); }, function(e){ no(e && e.code===1 ? 'Location is blocked – allow location for this page in the browser settings, then try again.' : 'No location yet – step outside or wait a few seconds, then try again.'); }, {enableHighAccuracy:true, timeout:20000, maximumAge:60000});
+    var best=null, done=false, id=null, timer=null;
+    var BLOCKED='Location is blocked – allow location for this page in the browser settings, then try again.';
+    var NONE='No location yet – turn on location, step outside or wait a few seconds, then try again.';
+    function stop(){ done=true; if(id!==null) navigator.geolocation.clearWatch(id); if(timer) clearTimeout(timer); }
+    function finish(){
+      if(done) return; stop();
+      if(best) return ok(best.coords);
+      navigator.geolocation.getCurrentPosition(function(p){ ok(p.coords); }, function(e){ no(e && e.code===1 ? BLOCKED : NONE); }, {enableHighAccuracy:false, maximumAge:300000, timeout:10000});
+    }
+    id=navigator.geolocation.watchPosition(function(p){
+      if(done) return;
+      if(!best || p.coords.accuracy < best.coords.accuracy) best=p;
+      if(p.coords.accuracy <= 15) finish();
+    }, function(e){ if(e && e.code===1 && !done){ stop(); no(BLOCKED); } }, {enableHighAccuracy:true, maximumAge:0, timeout:20000});
+    timer=setTimeout(finish, 15000);
   });
 }
 function ciGo(kind){
   var sid=$('ciSchool').value; show($('ciErr'),''); show($('ciOk'),''); $('ciFix').innerHTML='';
   if(!sid){ show($('ciErr'),'Choose the school first.'); return; }
-  busy(true);
+  busy(true); show($('ciOk'),'Getting your location… (up to 25 seconds)');
   ciPos().then(function(c){
+    show($('ciOk'),'');
     CI.last={school:sid};
     return ciCall('tile',{school:sid, kind:kind, lat:c.latitude, lng:c.longitude, acc:c.accuracy, scanId:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)});
   }).then(function(r){
