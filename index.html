@@ -831,8 +831,12 @@ function upd(d){ UPD=Math.max(0,UPD+d); $('upd').classList.toggle('hidden',UPD==
 function staleOn(el,on){ if(el) el.classList.toggle('stale',on); upd(on?1:-1); }
 function swr(view, bodyEl, fn, args, onData, onErr){
   var key=cKey(fn,args), ca=cGet(key,true), c=ca&&ca.v, tok=(SWR.tok[view]=(SWR.tok[view]||0)+1);
-  if(c && ca.pre && ca.age<60000){ cPut(key,c); onData(c,false); return; } // loaded in the background right after sign-in: use it once as is
-  if(c){ onData(c,true); staleOn(bodyEl,true); } else busy(true);
+  /* v9.73 (24 Nov 2026): if the copy kept on the phone cannot be shown (damaged or from an older page), it is deleted and the screen loads fresh from the server. Before, the screen stayed blank with no fields (Fatima, Kherbet Rouha). */
+  if(c){ try{
+    if(ca.pre && ca.age<60000){ cPut(key,c); onData(c,false); return; } // loaded in the background right after sign-in: use it once as is
+    onData(c,true);
+  }catch(e){ store(key,null); c=null; } }
+  if(c) staleOn(bodyEl,true); else busy(true);
   call.apply(null,[fn].concat(args)).then(function(r){
     if(c) staleOn(bodyEl,false);
     if(SWR.tok[view]!==tok) return;
