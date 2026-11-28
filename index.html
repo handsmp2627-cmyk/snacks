@@ -452,6 +452,13 @@
 
 <!-- SCHOOL INFO -->
 <section id="v-info" class="hidden">
+  <div class="card hidden" id="stoCard">
+    <h2>Storage room capacity</h2>
+    <div class="meta" id="stoMeta"></div>
+    <button class="btn" id="stoBtn" onclick="stoToggle()">Answer the storage question</button>
+    <div id="stoBox" class="hidden" style="margin-top:10px"></div>
+    <div class="err" id="stoErr"></div>
+  </div>
   <div class="card hidden" id="iApprove">
     <h2>Waiting for your approval</h2>
     <div id="iApproveList"></div>
@@ -801,7 +808,7 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbyzRf6yjLSRwU1wY_KvcIIGY4
 var S = { user:null, uid:'', pin:'', schools:[], reasons:[], plan:null, daily:null, now:null };
 function $(id){ return document.getElementById(id); }
 /* Calls that are safe to repeat automatically if Google returns an error page (busy server). */
-var NO_RETRY = { apiStrikeSet:1, apiStrikeRemove:1, apiTrkDownload:1, apiSupResolve:1, apiSupDownload:1, apiSupVouchers:1, apiRecessDay:1, apiWhReturnType:1, apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
+var NO_RETRY = { apiStorageSave:1, apiStrikeSet:1, apiStrikeRemove:1, apiTrkDownload:1, apiSupResolve:1, apiSupDownload:1, apiSupVouchers:1, apiRecessDay:1, apiWhReturnType:1, apiDecide:1, apiRequestStudents:1, apiRequestChange:1, apiAllergyAdd:1, apiAllergyRemove:1, apiSaveOps:1, apiDropout:1, apiRequestReceived:1, apiWhMenuChange:1, apiWhMenuRemove:1, apiWhReturn:1, apiWhReturnCancel:1 };
 var DEBUG = /[?&]debug=1/.test(location.search);
 function dbg(fn, srv, tot){ var d=$('dbg'); if(!d){ d=document.createElement('div'); d.id='dbg'; d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#111;color:#0f0;font:11px monospace;padding:4px 8px;z-index:40;max-height:30vh;overflow:auto'; document.body.appendChild(d); }
   d.innerHTML='<div>'+fn+': server '+(srv/1000).toFixed(2)+' s · total '+(tot/1000).toFixed(2)+' s · Google/network '+((tot-srv)/1000).toFixed(2)+' s</div>'+d.innerHTML; }
@@ -1567,6 +1574,7 @@ function initInfo(){
   $('iBody').classList.add('hidden');
   loadApprovals();
   stInit(); // v9.63
+  stoInit(); // v9.81
 }
 function loadApprovals(){
   if(!S.user.canOverride){ $('iApprove').classList.add('hidden'); return; }
@@ -2381,6 +2389,48 @@ function dbStat(p, good, watch){
 function dbF(f){ return D.d.fields.indexOf(f); }
 function dbV(a,f){ return a[dbF(f)]||0; }
 
+/* ---------- v9.81: storage room capacity question (snack schools, answered once) ---------- */
+var STO = { d: null, open: false };
+function stoFmt(x){ return String(Math.round(x*100)/100); }
+function stoInit(){
+  show($('stoErr'),'');
+  call('apiStorage',S.uid,S.pin).then(function(r){ STO.d=r; stoRender(); }).catch(function(e){ show($('stoErr'),String(e&&e.msg?e.msg:e)); });
+}
+function stoToggle(){ STO.open=!STO.open; stoRender(); }
+function stoRender(){
+  var r=STO.d; if(!r) return;
+  var list=r.schools, todo=list.filter(function(s){ return !s.ans; }).length;
+  $('stoCard').classList.toggle('hidden',!list.length);
+  if(!list.length) return;
+  $('stoMeta').textContent = (list.length-todo)+' of '+list.length+' snack school(s) answered.'+(todo&&r.edit?' Please answer once for each school.':'');
+  $('stoBtn').textContent = (STO.open?'Hide':(todo&&r.edit?'Answer the storage question ('+todo+' to answer)':'See the answers'));
+  $('stoBox').classList.toggle('hidden',!STO.open);
+  if(!STO.open) return;
+  $('stoBox').innerHTML=list.map(function(s){
+    var h='<div style="padding:8px 0;border-top:1px solid #e3e8f0"><b>'+esc(s.name)+'</b> <span class="meta">('+esc(s.id)+(s.mon?' · '+esc(s.mon):'')+')</span>';
+    h+='<div style="margin:4px 0">Does the storage room have the capacity for <b>'+stoFmt(s.x)+'</b> crates?</div>';
+    h+='<div class="meta">AM '+s.am+' / PM '+s.pm+' students: Day 3 and Day 4 (AM ÷ 30 + PM ÷ 30) + Day 5 (PM ÷ 30).</div>';
+    if(s.ans) h+='<div class="meta" style="margin-top:4px"><b style="color:'+(s.ans==='Yes'?'#1a7f37':'#b3261e')+'">'+esc(s.ans)+'</b>'+(s.ans==='No'&&s.crates!==null?' – the room holds '+esc(String(s.crates))+' crates':'')+' · '+esc(s.by)+', '+esc(s.at)+'</div>';
+    if(r.edit && (!s.ans || r.change)){
+      h+='<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">'
+        +'<button class="btn" style="width:auto" onclick="stoSave(\''+esc(s.id)+'\',\'Yes\')">Yes</button>'
+        +'<button class="btn sec" style="width:auto" onclick="stoNo(\''+esc(s.id)+'\')">No</button>'
+        +'<span id="stoNo_'+esc(s.id)+'" class="hidden"><input id="stoN_'+esc(s.id)+'" type="number" min="0" step="1" placeholder="Crates the room holds" style="width:190px"> '
+        +'<button class="btn" style="width:auto" onclick="stoSave(\''+esc(s.id)+'\',\'No\')">Save</button></span></div>';
+    }
+    return h+'</div>';
+  }).join('');
+}
+function stoNo(id){ var e=$('stoNo_'+id); if(e){ e.classList.remove('hidden'); var i=$('stoN_'+id); if(i) i.focus(); } }
+function stoSave(id,ans){
+  show($('stoErr'),'');
+  var n=ans==='No'?($('stoN_'+id)||{}).value:'';
+  if(ans==='No'&&(n===''||n===undefined)){ show($('stoErr'),'Type how many crates the storage room can hold.'); return; }
+  busy(true);
+  call('apiStorageSave',S.uid,S.pin,id,ans,n).then(function(x){ busy(false);
+    STO.d.schools.forEach(function(s){ if(s.id===id){ s.ans=x.ans; s.crates=x.crates; s.by=x.by; s.at=x.at; } }); stoRender();
+  }).catch(function(e){ busy(false); show($('stoErr'),String(e&&e.msg?e.msg:e)); });
+}
 /* ---------- v9.80: DTT deliveries not yet scanned (view only; SMeTS snapshot taken by a scheduled task at 07:00 and 14:00) ---------- */
 var DTT = { d: null };
 var DTT_ST = { CONFIRMED: 'not loaded / not scanned', LOADED: 'loaded, not scanned', DELIVERED: 'delivered, not scanned at school' };
