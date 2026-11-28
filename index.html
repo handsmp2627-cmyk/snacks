@@ -398,11 +398,25 @@
     <button class="tile snk" onclick="go('daily')"><b>Snacks distribution <span id="tDailyBadge"></span></b><span id="tDaily">Received, distributed and leftovers – every day.</span></button>
     <button class="tile hidden" id="tCi" onclick="go('ci')" style="border-left-color:#0b7a75"><b>Check-in <span id="tCiBadge"></span></b><span>Arrive at and leave a school with one tap – the school QR still works the same way.</span></button>
     <button class="tile" id="tOdk" onclick="go('odk')" style="border-left-color:#7a4bb8"><b>ODK forms</b><span>Weekly MoDA monitoring forms still pending, by school – view only.</span></button>
+    <button class="tile" id="tDtt" onclick="go('dtt')" style="border-left-color:#c2410c"><b>DTT deliveries</b><span>School deliveries in SMeTS not yet scanned in school – view only.</span></button>
+
   </div>
   <div class="card" style="margin-top:14px">
     <h2>Rules</h2>
     <div class="meta" id="rules"></div>
   </div>
+</section>
+
+<!-- DTT DELIVERIES (v9.80) -->
+<section id="v-dtt" class="hidden">
+  <div class="card">
+    <h2>DTT deliveries (SMeTS)</h2>
+    <div class="meta" id="dttMeta"></div>
+    <div class="chips" id="dttSum"></div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="dttUp" onchange="dttRender()"> Show upcoming deliveries too</label>
+  </div>
+  <div class="err" id="dttErr"></div>
+  <div id="dttBody"></div>
 </section>
 
 <!-- ODK FORMS (v9.79) -->
@@ -1120,7 +1134,7 @@ function ciDecide(id,d){
     .catch(function(e){ busy(false); show($('ciErr'),e); });
 }
 function go(v){
-  ['login','home','info','plan','daily','kitchen','hc','dash','wh','ci','odk'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
+  ['login','home','info','plan','daily','kitchen','hc','dash','wh','ci','odk','dtt'].forEach(function(x){ $('v-'+x).classList.toggle('hidden',x!==v); });
   if(typeof dbTipOff==='function') dbTipOff();
   $('btnBack').classList.toggle('hidden', v==='login'||v==='home');
   $('btnOut').classList.toggle('hidden', v==='login');
@@ -1134,6 +1148,7 @@ function go(v){
   if(v==='wh') initWh();
   if(v==='ci') initCi(); // v9.53
   if(v==='odk') initOdk(); // v9.79
+  if(v==='dtt') initDtt(); // v9.80
   if(v==='home') refreshInfoBadge();
   window.scrollTo(0,0);
 }
@@ -2366,6 +2381,47 @@ function dbStat(p, good, watch){
 function dbF(f){ return D.d.fields.indexOf(f); }
 function dbV(a,f){ return a[dbF(f)]||0; }
 
+/* ---------- v9.80: DTT deliveries not yet scanned (view only; SMeTS snapshot taken by a scheduled task at 07:00 and 14:00) ---------- */
+var DTT = { d: null };
+var DTT_ST = { CONFIRMED: 'not loaded / not scanned', LOADED: 'loaded, not scanned', DELIVERED: 'delivered, not scanned at school' };
+function initDtt(){
+  show($('dttErr'),'');
+  busy(true);
+  call('apiDtt',S.uid,S.pin).then(function(r){ busy(false); DTT.d=r; dttRender(); })
+    .catch(function(e){ busy(false); show($('dttErr'),String(e&&e.msg?e.msg:e)); });
+}
+function dttRender(){
+  var r=DTT.d; if(!r) return;
+  $('dttMeta').textContent = r.at ? 'Snapshot of SMeTS taken '+r.at+'. Deliveries from '+odkFmt(r.from||'2026-11-02')+' on. A delivery counts as done only once it is scanned in school (DONE). View only.' : 'No SMeTS snapshot has been loaded yet.';
+  $('dttSum').innerHTML='<span class="chip">'+r.tot.overdue+' past days not scanned</span><span class="chip">'+r.tot.today+' today</span><span class="chip">'+r.tot.upcoming+' upcoming</span>';
+  var up=$('dttUp').checked, groups={}, order=[];
+  r.schools.forEach(function(s){
+    var rows=s.rows.filter(function(x){ return up || x.w!=='upcoming'; });
+    if(!rows.length) return;
+    var k=s.monId||'-'; if(!groups[k]){ groups[k]={name:s.mon||'No area monitor',list:[]}; order.push(k); }
+    groups[k].list.push({s:s,rows:rows});
+  });
+  order.sort(function(a,b){ return groups[a].name<groups[b].name?-1:1; });
+  var h='';
+  order.forEach(function(k){
+    var g=groups[k], od=0;
+    g.list.sort(function(a,b){ return a.s.name<b.s.name?-1:1; });
+    g.list.forEach(function(x){ x.rows.forEach(function(y){ if(y.w==='overdue') od++; }); });
+    h+='<div class="card"><h2>'+esc(g.name)+' <span class="chip">'+(od?od+' past not scanned':'nothing overdue')+'</span></h2>';
+    g.list.forEach(function(x){
+      h+='<div style="padding:8px 0;border-top:1px solid #e3e8f0"><b>'+esc(x.s.name)+'</b> <span class="meta">('+esc(x.s.id)+')</span>';
+      x.rows.forEach(function(y){
+        var col=y.w==='overdue'?'#b3261e':y.w==='today'?'#a15c00':'#5b6b85';
+        h+='<div class="meta"><span style="color:'+col+'">'+odkFmt(y.d)+'</span> · '+esc(DTT_ST[y.st]||y.st)+' · '+(y.am?'AM '+y.am:'')+(y.am&&y.pm?' / ':'')+(y.pm?'PM '+y.pm:'')+(y.alg?' <span class="chip">allergy</span>':'')+(y.wb?' · waybill '+esc(y.wb):'')+'</div>';
+      });
+      h+='</div>';
+    });
+    h+='</div>';
+  });
+  if(!h) h='<div class="card"><div class="meta">Nothing pending.</div></div>';
+  if(r.unmatched&&r.unmatched.length) h+='<div class="card"><h2>Not linked to a school</h2><div class="meta">'+r.unmatched.map(function(u){ return esc(u.l)+' ×'+u.n; }).join('<br>')+'</div><div class="meta" style="margin-top:6px">These CERD codes are not in School Info or the ODK name map – tell the Project Manager.</div></div>';
+  $('dttBody').innerHTML=h;
+}
 /* ---------- v9.79: ODK forms pending (view only; the data is a MoDA snapshot refreshed by a scheduled task) ---------- */
 var ODK = { d: null };
 function odkFmt(w){ var p=String(w).split('-'); return Number(p[2])+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(p[1])-1]; }
